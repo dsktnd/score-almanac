@@ -42,7 +42,7 @@
   --c-rem:   oklch(48% 0.110 251);
   --c-light: oklch(62% 0.165 312);
   --c-deep:  oklch(47% 0.208 299);
-  --c-steps: oklch(58% 0.200 352);
+  --c-steps: oklch(58% 0.210 356);
   --c-bed:   oklch(57% 0.120 275);
   --c-alc:   oklch(70% 0.090 275);
   --color-check: oklch(48% 0.006 270);
@@ -108,7 +108,7 @@
     --c-rem:   oklch(85% 0.046 251);
     --c-light: oklch(62% 0.165 312);
     --c-deep:  oklch(56% 0.190 299);
-    --c-steps: oklch(72% 0.200 352);
+    --c-steps: oklch(69% 0.228 356);
     --c-bed:   oklch(62% 0.120 275);
     --c-alc:   oklch(74% 0.090 275);
     --color-check: oklch(68% 0.006 270);
@@ -680,8 +680,8 @@ const NUMS = [
   Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
   Object.assign({}, HM, { key: "light", label: "浅い睡眠",  short: "浅", cvar: "--c-light", ramp: [312, 62, 0.165, 62, 0.165], fixed: [0, 8] }),
   Object.assign({}, HM, { key: "deep",  label: "深い睡眠",  short: "深", cvar: "--c-deep",  ramp: [299, 47, 0.208, 56, 0.190], fixed: [0, 3] }),
-  /* 歩数: 固定ドメイン0-10000歩・3段グラデ 0=#ffdd63(黄) → 5000=#ff65b3(桃) → 10000=#82e1df(青緑) */
-  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: [0, 10000], inputmode: "numeric", cvar: "--c-steps", stops: [{ t: 0, c: "#ffdd63", L: 90 }, { t: 0.5, c: "#ff65b3", L: 72 }, { t: 1, c: "#82e1df", L: 85 }], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
+  /* 歩数: 固定ドメイン0-10000歩・3段グラデ 2000=#49b6ff(青) → 5000=#a480cf(紫) → 10000=#ff499e(桃)。2000未満は青 */
+  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: [0, 10000], inputmode: "numeric", cvar: "--c-steps", stops: [{ t: 0.2, c: "#49b6ff", L: 74 }, { t: 0.5, c: "#a480cf", L: 66 }, { t: 1, c: "#ff499e", L: 69 }], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
 ];
 const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
 darkMq.addEventListener("change", () => renderMonth());
