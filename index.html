@@ -42,7 +42,7 @@
   --c-rem:   oklch(48% 0.110 251);
   --c-light: oklch(62% 0.165 312);
   --c-deep:  oklch(47% 0.208 299);
-  --c-steps: oklch(52% 0.160 245);
+  --c-steps: oklch(58% 0.200 352);
   --c-bed:   oklch(57% 0.120 275);
   --c-alc:   oklch(70% 0.090 275);
   --color-check: oklch(48% 0.006 270);
@@ -108,7 +108,7 @@
     --c-rem:   oklch(85% 0.046 251);
     --c-light: oklch(62% 0.165 312);
     --c-deep:  oklch(56% 0.190 299);
-    --c-steps: oklch(55% 0.140 245);
+    --c-steps: oklch(72% 0.200 352);
     --c-bed:   oklch(62% 0.120 275);
     --c-alc:   oklch(74% 0.090 275);
     --color-check: oklch(68% 0.006 270);
@@ -674,14 +674,15 @@ const HM = {
 const NUMS = [
   /* ramp: [hue, topL_light, topC_light, topL_dark, topC_dark] — cell shade runs tint→this endpoint */
   /* 体重: 固定ドメイン60-70kg・2色グラデ 60=#066FCA(青 L54) → 70=#FF6D64(赤 L71) */
-  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    ramp2: { c0: "#066FCA", c1: "#FF6D64", L0: 54, L1: 71 }, interp: true, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
+  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    stops: [{ t: 0, c: "#066FCA", L: 54 }, { t: 1, c: "#FF6D64", L: 71 }], interp: true, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
   { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   ramp: [275, 44, 0.19, 52, 0.17], fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
   Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
   Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
   Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
   Object.assign({}, HM, { key: "light", label: "浅い睡眠",  short: "浅", cvar: "--c-light", ramp: [312, 62, 0.165, 62, 0.165], fixed: [0, 8] }),
   Object.assign({}, HM, { key: "deep",  label: "深い睡眠",  short: "深", cvar: "--c-deep",  ramp: [299, 47, 0.208, 56, 0.190], fixed: [0, 3] }),
-  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: null,      inputmode: "numeric", cvar: "--c-steps", ramp: [245, 50, 0.16, 55, 0.14], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
+  /* 歩数: 固定ドメイン0-10000歩・3段グラデ 0=#ffdd63(黄) → 5000=#ff65b3(桃) → 10000=#82e1df(青緑) */
+  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: [0, 10000], inputmode: "numeric", cvar: "--c-steps", stops: [{ t: 0, c: "#ffdd63", L: 90 }, { t: 0.5, c: "#ff65b3", L: 72 }, { t: 1, c: "#82e1df", L: 85 }], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
 ];
 const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
 darkMq.addEventListener("change", () => renderMonth());
@@ -1022,9 +1023,14 @@ function renderOverview() {
           const t = Math.min(1, Math.max(0, hi === lo ? 1 : (v - lo) / (hi - lo)));
           const dk = darkMq.matches;
           cell.classList.add("num", "fill");
-          if (c.ramp2) {
-            cell.style.background = "color-mix(in oklab, " + c.ramp2.c1 + " " + Math.round(t * 100) + "%, " + c.ramp2.c0 + ")";
-            const Le = c.ramp2.L0 + (c.ramp2.L1 - c.ramp2.L0) * t;
+          if (c.stops) {
+            const s = c.stops;
+            let si = 0;
+            while (si < s.length - 2 && t > s[si + 1].t) si++;
+            const a = s[si], b2 = s[si + 1];
+            const tt = Math.min(1, Math.max(0, (t - a.t) / (b2.t - a.t)));
+            cell.style.background = "color-mix(in oklab, " + b2.c + " " + Math.round(tt * 100) + "%, " + a.c + ")";
+            const Le = a.L + (b2.L - a.L) * tt;
             if (dk ? Le >= 63 : Le <= 64) cell.classList.add("hi");
           } else {
             const H = c.ramp[0], Lt = dk ? c.ramp[3] : c.ramp[1], Cm = dk ? c.ramp[4] : c.ramp[2];
