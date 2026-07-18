@@ -35,7 +35,7 @@
   --color-focus:    oklch(44%  0.190 275);
   --color-chart:    oklch(58%  0.240 355);
   --color-chart-soft: oklch(58% 0.240 355 / 0.14);
-  --c-wt:    oklch(58% 0.240 355);
+  --c-wt:    oklch(55% 0.180 26);
   --c-rec:   oklch(44% 0.190 275);
   --c-slp:   oklch(58% 0.130 302);
   --c-wake:  oklch(64% 0.100 194);
@@ -101,7 +101,7 @@
     --color-focus:    oklch(64%  0.160 275);
     --color-chart:    oklch(66%  0.230 355);
     --color-chart-soft: oklch(66% 0.230 355 / 0.18);
-    --c-wt:    oklch(66% 0.230 355);
+    --c-wt:    oklch(71% 0.180 26);
     --c-rec:   oklch(52% 0.170 275);
     --c-slp:   oklch(73% 0.100 302);
     --c-wake:  oklch(94% 0.065 194);
@@ -683,7 +683,8 @@ const HM = {
 };
 const NUMS = [
   /* ramp: [hue, topL_light, topC_light, topL_dark, topC_dark] — cell shade runs tint→this endpoint */
-  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: null,      inputmode: "decimal", cvar: "--c-wt",    ramp: [355, 58, 0.24, 66, 0.23], fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
+  /* 体重: 固定ドメイン60-70kg・2色グラデ 60=#066FCA(青 L54) → 70=#FF6D64(赤 L71) */
+  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    ramp2: { c0: "#066FCA", c1: "#FF6D64", L0: 54, L1: 71 }, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
   { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   ramp: [275, 44, 0.19, 52, 0.17], fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
   Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
   Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
@@ -1009,13 +1010,19 @@ function renderOverview() {
           const lo = domains[c.key][0], hi = domains[c.key][1];
           const t = Math.min(1, Math.max(0, hi === lo ? 1 : (v - lo) / (hi - lo)));
           const dk = darkMq.matches;
-          const H = c.ramp[0], Lt = dk ? c.ramp[3] : c.ramp[1], Cm = dk ? c.ramp[4] : c.ramp[2];
-          const L0 = dk ? 24 : 90, C0 = dk ? 0.03 : 0.035;
-          const L = Math.round((L0 + (Lt - L0) * t) * 10) / 10;
-          const C = Math.round((C0 + (Cm - C0) * t) * 1000) / 1000;
-          cell.style.background = "oklch(" + L + "% " + C + " " + H + ")";
           cell.classList.add("num", "fill");
-          if (dk ? L >= 52 : L <= 64) cell.classList.add("hi");
+          if (c.ramp2) {
+            cell.style.background = "color-mix(in oklab, " + c.ramp2.c1 + " " + Math.round(t * 100) + "%, " + c.ramp2.c0 + ")";
+            const Le = c.ramp2.L0 + (c.ramp2.L1 - c.ramp2.L0) * t;
+            if (dk ? Le >= 63 : Le <= 64) cell.classList.add("hi");
+          } else {
+            const H = c.ramp[0], Lt = dk ? c.ramp[3] : c.ramp[1], Cm = dk ? c.ramp[4] : c.ramp[2];
+            const L0 = dk ? 24 : 90, C0 = dk ? 0.03 : 0.035;
+            const L = Math.round((L0 + (Lt - L0) * t) * 10) / 10;
+            const C = Math.round((C0 + (Cm - C0) * t) * 1000) / 1000;
+            cell.style.background = "oklch(" + L + "% " + C + " " + H + ")";
+            if (dk ? L >= 52 : L <= 64) cell.classList.add("hi");
+          }
           cell.textContent = c.cellFmt(v);
         }
         cell.dataset.tip = c.label + " " + (has ? c.fmt(v) + (c.unit || "") : "未記入");
