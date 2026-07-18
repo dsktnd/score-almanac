@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#e4e4e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Score Almanac">
+<title>Score Almanac — 月間スコア台帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+/* Hallmark · component: app (score tracker) · genre: editorial · theme: studied-DNA (source: user image — riso-style dataviz poster, magenta×indigo two-ink on warm paper)
+ * scope: app-UI — macrostructure/nav/footer archetypes skipped by design
+ * tone: utilitarian-editorial · paper oklch(96% .008 85) · accent-ink: indigo oklch(44% .15 275)
+ * categorical: wt=magenta355 rec=indigo275 slp=violet315 steps=blue245 (lightness-spread for CVD)
+ * charts: month heat-strips (sequential single-hue, day×item) + small multiples ×4 (single-axis rule)
+ * palette validated (light/dark PASS) · sequential ramp = color-mix(in oklch) paper→chart, monotonic
+ * states: default · focus-visible · active · disabled — silent-success save
+ */
+:root {
+  --color-paper:    oklch(92%  0.003 270);
+  --color-paper-2:  oklch(89%  0.004 270);
+  --color-paper-3:  oklch(84%  0.005 270);
+  --color-rule:     oklch(73%  0.006 270);
+  --color-rule-2:   oklch(40%  0.008 270);
+  --color-muted:    oklch(46%  0.008 270);
+  --color-neutral:  oklch(30%  0.008 270);
+  --color-ink:      oklch(17%  0.006 270);
+  --color-accent:   oklch(44%  0.190 275);
+  --color-focus:    oklch(44%  0.190 275);
+  --color-chart:    oklch(58%  0.240 355);
+  --color-chart-soft: oklch(58% 0.240 355 / 0.14);
+  --c-wt:    oklch(58% 0.240 355);
+  --c-rec:   oklch(44% 0.190 275);
+  --c-slp:   oklch(58% 0.130 302);
+  --c-wake:  oklch(64% 0.100 194);
+  --c-rem:   oklch(48% 0.110 251);
+  --c-light: oklch(62% 0.165 312);
+  --c-deep:  oklch(47% 0.208 299);
+  --c-steps: oklch(52% 0.160 245);
+  --c-bed:   oklch(57% 0.120 275);
+  --c-alc:   oklch(70% 0.090 275);
+  --color-check: oklch(48% 0.006 270);
+  /* sleep stacked-bar segments — user-specified flat colors, both modes */
+  --sb-deep:  #6f2dbd;
+  --sb-light: #a663cc;
+  --sb-rem:   #b8d0eb;
+  --sb-wake:  #b9faf8;
+  --sb-text-on-dark:  oklch(97% 0 0);
+  --sb-text-on-light: oklch(22% 0.02 270);
+
+  --font-display: "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-body:    "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-serif:   "Newsreader", ui-serif, Georgia, serif;
+  --font-label:   "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs:   0.6875rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md:   1.0625rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.5rem;
+  --text-display: clamp(1.75rem, 7vw, 2.5rem);
+
+  --tracking-label: 0.06em;
+  --lh-snug: 1.22;
+  --lh-normal: 1.5;
+
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+
+  --rule-hair: 1px;
+  --rule-fine: 3px;
+  --radius: 2px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper:    oklch(17%  0.004 270);
+    --color-paper-2:  oklch(20%  0.004 270);
+    --color-paper-3:  oklch(26%  0.005 270);
+    --color-rule:     oklch(36%  0.006 270);
+    --color-rule-2:   oklch(72%  0.006 270);
+    --color-muted:    oklch(68%  0.006 270);
+    --color-neutral:  oklch(80%  0.005 270);
+    --color-ink:      oklch(93%  0.004 270);
+    --color-accent:   oklch(64%  0.160 275);
+    --color-focus:    oklch(64%  0.160 275);
+    --color-chart:    oklch(66%  0.230 355);
+    --color-chart-soft: oklch(66% 0.230 355 / 0.18);
+    --c-wt:    oklch(66% 0.230 355);
+    --c-rec:   oklch(52% 0.170 275);
+    --c-slp:   oklch(73% 0.100 302);
+    --c-wake:  oklch(94% 0.065 194);
+    --c-rem:   oklch(85% 0.046 251);
+    --c-light: oklch(62% 0.165 312);
+    --c-deep:  oklch(56% 0.190 299);
+    --c-steps: oklch(55% 0.140 245);
+    --c-bed:   oklch(62% 0.120 275);
+    --c-alc:   oklch(74% 0.090 275);
+    --color-check: oklch(68% 0.006 270);
+  }
+  body { font-weight: 350; }
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { overflow-x: clip; }
+body {
+  overflow-x: clip;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  padding: max(var(--space-md), env(safe-area-inset-top)) var(--space-md) calc(var(--space-2xl) + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust: 100%;
+}
+main { max-width: 40rem; margin-inline: auto; }
+
+/* ── masthead ─────────────────────────────── */
+header.masthead {
+  border-bottom: var(--rule-fine) solid var(--color-ink);
+  padding-block: var(--space-2xs) var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+.wordmark {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-left: auto;
+  margin-right: var(--space-xs);
+}
+.month-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.month-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 5vw, 1.625rem);
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  line-height: 1;
+}
+.month-title .yr {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 0.45em;
+  color: var(--color-muted);
+  margin-left: var(--space-2xs);
+}
+.month-nav { display: flex; gap: var(--space-2xs); }
+.month-nav button {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  line-height: 1;
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  width: 2rem; height: 2rem;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.month-nav button:active { transform: translateY(1px); }
+.month-nav button:disabled { color: var(--color-rule); border-color: var(--color-paper-3); }
+
+/* ── section heads ────────────────────────── */
+section { margin-bottom: var(--space-2xl); }
+h2 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-md);
+}
+
+/* ── month overview: vertical calendar heatmap ── */
+section.ov-section { margin-bottom: var(--space-lg); }
+.ov-grid {
+  --ov-cell: clamp(0.875rem, calc((100dvh - 9rem) / 31 - 2px), 1.5rem);
+  display: grid;
+  grid-template-columns: 2.6rem repeat(5, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
+  gap: 2px;
+  justify-content: start;
+  cursor: pointer;
+}
+.ov-h {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+  text-align: center;
+  white-space: nowrap; overflow: hidden;
+  padding-bottom: 2px;
+}
+.ov-date {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  color: var(--color-muted);
+  display: flex; align-items: center;
+  padding-left: 2px;
+  white-space: nowrap;
+}
+.ov-date.we { color: var(--color-accent); }
+.ov-date.today { color: var(--color-accent); font-weight: 500; }
+.ov-cell {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-rule);
+  border-radius: 1px; min-width: 0; height: var(--ov-cell);
+}
+.ov-cell.fill { box-shadow: none; }
+.ov-cell.no { display: flex; align-items: center; justify-content: center; }
+.ov-cell.no::after {
+  content: "";
+  width: 18%; height: 18%;
+  min-width: 2px; min-height: 2px;
+  border-radius: 50%;
+  background: var(--color-muted);
+}
+.ov-cell.today { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.ov-cell.num {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  overflow: hidden;
+}
+.ov-cell.num.hi { color: var(--color-paper); }
+.ov-h.bar { text-align: left; padding-left: 2px; }
+.ov-t {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 3px;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.ov-bar { display: flex; gap: 1px; padding: 1px; }
+.ov-bar .sb {
+  height: calc(100% - 0px); border-radius: 1px; min-width: 1px;
+  display: flex; align-items: center;
+  overflow: visible; white-space: nowrap;
+  padding-left: 2px;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ov-bar .sb .lb { position: relative; z-index: 1; }
+.ov-bar .sb.deep, .ov-bar .sb.light { color: var(--sb-text-on-dark); }
+.ov-bar .sb.deep .lb, .ov-bar .sb.light .lb { text-shadow: 0 1px 2px oklch(30% 0.05 300 / 0.6); }
+.ov-bar .sb.rem, .ov-bar .sb.wake { color: var(--sb-text-on-light); }
+.ov-bar .sb.deep  { background: var(--sb-deep); }
+.ov-bar .sb.light { background: var(--sb-light); }
+.ov-bar .sb.rem   { background: var(--sb-rem); }
+.ov-bar .sb.wake  { background: var(--sb-wake); }
+.ov-bar { position: relative; }
+.ov-bar .tot {
+  position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mark.sq { border-radius: 1px; }
+.mark.sq.deep  { background: var(--sb-deep); }
+.mark.sq.light { background: var(--sb-light); }
+.mark.sq.rem   { background: var(--sb-rem); }
+.mark.sq.wake  { background: var(--sb-wake); }
+.ov-sp { background: none; }
+.ov-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs); margin-top: var(--space-xs); font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+.ov-legend .ramp { width: 4.5rem; height: 0.5rem; border-radius: 1px; background: linear-gradient(to right, var(--color-paper-2), var(--color-neutral)); }
+.ov-legend .mark { margin-left: var(--space-sm); }
+
+/* ── entry panel ──────────────────────────── */
+.entry-date-row {
+  display: flex; align-items: center; gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+.entry-date-row input[type="date"] {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-xs) var(--space-sm);
+  min-height: 2.5rem;
+}
+.entry-date-row .daystep {
+  font-family: var(--font-label);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  width: 2.5rem; height: 2.5rem;
+  cursor: pointer;
+}
+.entry-date-row .daystep:active { transform: translateY(1px); }
+#save-note {
+  margin-left: auto;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+#save-note.shown { opacity: 1; }
+
+.toggles { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-xs); }
+.toggle {
+  display: flex; align-items: center; gap: var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper-2);
+  padding: var(--space-sm);
+  min-height: 3rem;
+  cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.toggle:active { transform: translateY(1px); }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle .dot {
+  flex: none;
+  width: 1.125rem; height: 1.125rem;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: 50%;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.toggle input:checked + .dot { background: var(--color-check); border-color: var(--color-check); }
+.toggle input:focus-visible ~ .lbl { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.toggle .lbl { font-size: var(--text-sm); }
+
+.numerics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-xs); margin-top: var(--space-xs); }
+.numeric { border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); padding: var(--space-xs) var(--space-sm); }
+.numeric label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+}
+.numeric .inrow { display: flex; align-items: baseline; gap: var(--space-2xs); }
+.numeric input {
+  width: 100%;
+  font-family: var(--font-label);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+  background: none; border: none;
+  padding: 0;
+  min-height: 2rem;
+}
+.numeric input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.numeric .unit { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* ── summary strip ────────────────────────── */
+.summary {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  line-height: 1.9;
+  color: var(--color-neutral);
+  border-block: var(--rule-hair) solid var(--color-rule);
+  padding-block: var(--space-sm);
+}
+.summary b { font-weight: 500; color: var(--color-ink); }
+
+/* ── month table ──────────────────────────── */
+.gridwrap { overflow-x: auto; }
+table.month {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+}
+table.month th, table.month td {
+  border-bottom: var(--rule-hair) solid var(--color-paper-3);
+  padding: var(--space-2xs) 0.125rem;
+  text-align: center;
+  font-weight: 400;
+  white-space: nowrap;
+}
+table.month thead th {
+  color: var(--color-muted);
+  letter-spacing: var(--tracking-label);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  position: sticky; top: 0;
+  background: var(--color-paper);
+}
+table.month td.date, table.month th.date { text-align: left; padding-left: var(--space-2xs); }
+table.month td.date { color: var(--color-muted); }
+table.month td.date .dow { font-size: 0.9em; margin-left: 0.2em; }
+table.month tr.weekend td.date { color: var(--color-accent); }
+table.month tr.today td.date { color: var(--color-ink); font-weight: 500; }
+table.month tr.today { box-shadow: inset var(--rule-fine) 0 0 var(--color-accent); }
+table.month td.num { font-variant-numeric: tabular-nums; color: var(--color-neutral); }
+table.month tr { cursor: pointer; }
+table.month tr:active td { background: var(--color-paper-2); }
+.mark { display: inline-block; width: 0.625rem; height: 0.625rem; border-radius: 50%; vertical-align: -1px; }
+.mark.yes { background: var(--color-check); }
+.mark.no  {
+  border: var(--rule-hair) solid var(--color-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mark.no::after { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--color-muted); }
+.mark.blank { border: var(--rule-hair) solid var(--color-rule); }
+.legend {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-xs);
+}
+
+/* ── charts ───────────────────────────────── */
+.chart { margin-bottom: var(--space-lg); }
+.chart h3 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-neutral);
+  margin-bottom: var(--space-2xs);
+}
+.chart h3 .stat { color: var(--color-muted); font-weight: 400; float: right; }
+.chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chart .gridline { stroke: var(--color-paper-3); stroke-width: 1; }
+.chart .axislabel { fill: var(--color-muted); font-family: var(--font-label); font-size: 9px; }
+.chart .line { stroke: var(--mc, var(--color-chart)); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--color-chart-soft); }
+.chart .pt { fill: var(--mc, var(--color-chart)); stroke: var(--color-paper); stroke-width: 2; }
+.chart .hit { fill: transparent; }
+.chart .empty-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); padding: var(--space-md) 0; }
+#tooltip {
+  position: fixed;
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+#tooltip.shown { opacity: 1; }
+
+/* ── data io ──────────────────────────────── */
+details.io summary {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding-block: var(--space-xs);
+}
+.io-row { display: flex; flex-wrap: wrap; gap: var(--space-xs); padding-block: var(--space-sm); }
+.io-row button, .io-row label.filebtn {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  padding: var(--space-xs) var(--space-md);
+  min-height: 2.5rem;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+}
+.io-row button:active, .io-row label.filebtn:active { transform: translateY(1px); }
+.io-row input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.io-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; }
+}
+@media (min-width: 480px) {
+  .toggles, .numerics { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="month-row">
+      <div class="month-title"><span id="mt-month"></span><span class="yr" id="mt-year"></span></div>
+      <div class="wordmark">Score Almanac</div>
+      <nav class="month-nav" aria-label="月の移動">
+        <button id="prev-month" aria-label="前の月">←</button>
+        <button id="next-month" aria-label="次の月">→</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="ov-section" aria-labelledby="h-ov">
+    <h2 id="h-ov">月間一覧</h2>
+    <div id="overview"></div>
+    <div class="ov-legend">
+      <span class="ramp" aria-hidden="true"></span><span>濃いほど高い</span>
+      <span class="mark sq deep"></span><span>深</span>
+      <span class="mark sq light"></span><span>浅</span>
+      <span class="mark sq rem"></span><span>レム</span>
+      <span class="mark sq wake"></span><span>覚醒</span>
+      <span class="mark yes"></span><span>した</span>
+      <span class="mark no"></span><span>しなかった</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-entry">
+    <h2 id="h-entry">記入</h2>
+    <div class="entry-date-row">
+      <button class="daystep" id="prev-day" aria-label="前日">‹</button>
+      <input type="date" id="entry-date" aria-label="記入する日付">
+      <button class="daystep" id="next-day" aria-label="翌日">›</button>
+      <span id="save-note" role="status">保存済み</span>
+    </div>
+    <div class="toggles" id="toggles"></div>
+    <div class="numerics" id="numerics"></div>
+  </section>
+
+  <section aria-labelledby="h-summary">
+    <h2 id="h-summary">今月の集計</h2>
+    <p class="summary" id="summary"></p>
+  </section>
+
+  <section aria-labelledby="h-grid">
+    <details class="io">
+      <summary id="h-grid">数値表（日別の全記録）</summary>
+      <div class="gridwrap">
+        <table class="month" id="month-table"></table>
+      </div>
+      <p class="legend"><span class="mark yes"></span> した ／ <span class="mark no"></span> しなかった ／ 空欄 = 未記入。行をタップすると記入欄に呼び出します。</p>
+    </details>
+  </section>
+
+  <section aria-labelledby="h-charts">
+    <h2 id="h-charts">推移</h2>
+    <div id="charts"></div>
+  </section>
+
+  <section>
+    <details class="io">
+      <summary>データの書き出し・読み込み</summary>
+      <div class="io-row">
+        <button id="export-json">JSONを書き出す</button>
+        <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept="application/json"></label>
+      </div>
+      <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
+    </details>
+  </section>
+</main>
+<div id="tooltip" role="status"></div>
+
+<script>
+"use strict";
+/* ── data model ───────────────────────────── */
+const STORE_KEY = "score-almanac:v1";
+const BOOLS = [
+  { key: "bed",   label: "ベッドで寝た", short: "ベ", cvar: "--c-alc", bool: true },
+  { key: "alc",   label: "酒を飲んだ",   short: "酒", cvar: "--c-alc", bool: true },
+  { key: "sauna", label: "サウナ",       short: "サ", bool: true },
+  { key: "eng",   label: "英語の勉強",   short: "英", bool: true },
+];
+/* time-typed metric (HHMM input · h:mm display · stored as decimal hours) */
+function hmSplit(v) { let h = Math.floor(v), m2 = Math.round((v - h) * 60); if (m2 === 60) { h++; m2 = 0; } return [h, m2]; }
+const HM = {
+  unit: "", min: 0, max: 24, step: 1, fixed: null, inputmode: "numeric", type: "text", ph: "0000", hint: "hhmm",
+  fmt: v => { const [h, m2] = hmSplit(v); return h + "h" + String(m2).padStart(2, "0") + "m"; },
+  toInput: v => { const [h, m2] = hmSplit(v); return String(h).padStart(2, "0") + String(m2).padStart(2, "0"); },
+  fromInput: s => { s = String(s).trim(); if (!/^\d{1,4}$/.test(s)) return null; s = s.padStart(4, "0"); const h = +s.slice(0, 2), m2 = +s.slice(2); if (h > 23 || m2 > 59) return null; return h + m2 / 60; },
+  cellFmt: v => { const [h, m2] = hmSplit(v); return h + ":" + String(m2).padStart(2, "0"); },
+};
+const NUMS = [
+  /* ramp: [hue, topL_light, topC_light, topL_dark, topC_dark] — cell shade runs tint→this endpoint */
+  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: null,      inputmode: "decimal", cvar: "--c-wt",    ramp: [355, 58, 0.24, 66, 0.23], fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
+  { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   ramp: [275, 44, 0.19, 52, 0.17], fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
+  Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
+  Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
+  Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
+  Object.assign({}, HM, { key: "light", label: "浅い睡眠",  short: "浅", cvar: "--c-light", ramp: [312, 62, 0.165, 62, 0.165], fixed: [0, 8] }),
+  Object.assign({}, HM, { key: "deep",  label: "深い睡眠",  short: "深", cvar: "--c-deep",  ramp: [299, 47, 0.208, 56, 0.190], fixed: [0, 3] }),
+  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: null,      inputmode: "numeric", cvar: "--c-steps", ramp: [245, 50, 0.16, 55, 0.14], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
+];
+const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
+darkMq.addEventListener("change", () => renderMonth());
+/* overview column order: 体重・リカ・睡眠積み上げバー | ベ・酒・サ・英 | 歩 (null = group gap) */
+const SLEEP_BAR = { sleepbar: true, scale: 10, segs: [["deep", "深"], ["light", "浅"], ["rem", "レ"], ["wake", "覚"]] };
+const NUMBYKEY = {};
+NUMS.forEach(n => NUMBYKEY[n.key] = n);
+/* overview columns: 体重・歩 | 酒・ベッド・リカ・睡眠バー(数字内包) | サ・英 */
+const OV_COLS = [NUMS[0], NUMS[7], BOOLS[1], BOOLS[0], NUMS[1], SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
+const DOW = ["日", "月", "火", "水", "木", "金", "土"];
+
+let db = load();
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch { return {}; }
+}
+function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+let viewMonth = todayKey().slice(0, 7);   // "YYYY-MM"
+let entryDate = todayKey();               // "YYYY-MM-DD"
+
+function daysInMonth(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function dayKey(ym, d) { return ym + "-" + String(d).padStart(2, "0"); }
+
+/* ── entry panel ──────────────────────────── */
+const togglesEl = document.getElementById("toggles");
+const numericsEl = document.getElementById("numerics");
+const dateEl = document.getElementById("entry-date");
+const saveNote = document.getElementById("save-note");
+let saveNoteTimer = null;
+
+BOOLS.forEach(b => {
+  const lab = document.createElement("label");
+  lab.className = "toggle";
+  lab.innerHTML = '<input type="checkbox" data-key="' + b.key + '"><span class="dot" aria-hidden="true"></span><span class="lbl">' + b.label + "</span>";
+  togglesEl.appendChild(lab);
+});
+NUMS.forEach(n => {
+  const div = document.createElement("div");
+  div.className = "numeric";
+  const attrs = n.type === "text"
+    ? 'type="text" maxlength="4" pattern="[0-9]*"'
+    : 'type="number" min="' + n.min + '" max="' + n.max + '" step="' + n.step + '"';
+  const hint = n.hint || n.unit;
+  div.innerHTML = '<label for="in-' + n.key + '">' + n.label + '</label>'
+    + '<div class="inrow"><input id="in-' + n.key + '" ' + attrs + ' data-key="' + n.key + '" inputmode="' + n.inputmode + '" placeholder="' + (n.ph || "—") + '">'
+    + (hint ? '<span class="unit">' + hint + "</span>" : "") + "</div>";
+  numericsEl.appendChild(div);
+});
+
+function readEntryToForm() {
+  dateEl.value = entryDate;
+  const rec = db[entryDate] || {};
+  togglesEl.querySelectorAll("input").forEach(i => { i.checked = rec[i.dataset.key] === true; });
+  numericsEl.querySelectorAll("input").forEach(i => {
+    const def = NUMBYKEY[i.dataset.key];
+    const v = rec[i.dataset.key];
+    i.value = (typeof v === "number" && isFinite(v)) ? (def.toInput ? def.toInput(v) : v) : "";
+  });
+}
+function writeFormToDb() {
+  const rec = {};
+  togglesEl.querySelectorAll("input").forEach(i => {
+    if (i.checked) rec[i.dataset.key] = true;
+    else if ((db[entryDate] || {})[i.dataset.key] !== undefined || i.dataset.touched) rec[i.dataset.key] = false;
+  });
+  numericsEl.querySelectorAll("input").forEach(i => {
+    const def = NUMBYKEY[i.dataset.key];
+    const v = def.fromInput ? def.fromInput(i.value) : parseFloat(i.value);
+    if (v !== null && isFinite(v)) rec[i.dataset.key] = v;
+  });
+  if (Object.keys(rec).length) db[entryDate] = rec; else delete db[entryDate];
+  persist();
+  flashSaved();
+  readEntryToForm();
+  renderMonth();
+}
+function flashSaved() {
+  const t = new Date();
+  saveNote.textContent = "保存 " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  saveNote.classList.add("shown");
+  clearTimeout(saveNoteTimer);
+  saveNoteTimer = setTimeout(() => saveNote.classList.remove("shown"), 2000);
+}
+togglesEl.addEventListener("change", e => { e.target.dataset.touched = "1"; writeFormToDb(); });
+numericsEl.addEventListener("change", writeFormToDb);
+dateEl.addEventListener("change", () => {
+  if (!dateEl.value) return;
+  entryDate = dateEl.value;
+  if (entryDate.slice(0, 7) !== viewMonth) { viewMonth = entryDate.slice(0, 7); }
+  render();
+});
+function stepDay(delta) {
+  const [y, m, d] = entryDate.split("-").map(Number);
+  const nd = new Date(y, m - 1, d + delta);
+  entryDate = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0") + "-" + String(nd.getDate()).padStart(2, "0");
+  if (entryDate.slice(0, 7) !== viewMonth) viewMonth = entryDate.slice(0, 7);
+  render();
+}
+document.getElementById("prev-day").addEventListener("click", () => stepDay(-1));
+document.getElementById("next-day").addEventListener("click", () => stepDay(1));
+
+/* ── month navigation ─────────────────────── */
+function stepMonth(delta) {
+  const [y, m] = viewMonth.split("-").map(Number);
+  const nd = new Date(y, m - 1 + delta, 1);
+  viewMonth = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0");
+  renderMonth();
+}
+document.getElementById("prev-month").addEventListener("click", () => stepMonth(-1));
+document.getElementById("next-month").addEventListener("click", () => stepMonth(1));
+
+/* ── summary ──────────────────────────────── */
+function renderSummary() {
+  const n = daysInMonth(viewMonth);
+  const parts = [];
+  BOOLS.forEach(b => {
+    let c = 0;
+    for (let d = 1; d <= n; d++) if ((db[dayKey(viewMonth, d)] || {})[b.key] === true) c++;
+    parts.push(b.label + " <b>" + c + "日</b>");
+  });
+  const avgs = [];
+  NUMS.forEach(m => {
+    const vals = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[m.key];
+      if (typeof v === "number" && isFinite(v)) vals.push(v);
+    }
+    if (vals.length) {
+      const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
+      avgs.push(m.label + " 平均 <b>" + m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100) + (m.unit || "") + "</b>");
+    }
+  });
+  document.getElementById("summary").innerHTML =
+    parts.join(" ・ ") + (avgs.length ? "<br>" + avgs.join(" ・ ") : "");
+}
+
+/* ── month table ──────────────────────────── */
+function renderTable() {
+  const n = daysInMonth(viewMonth);
+  const [y, m] = viewMonth.split("-").map(Number);
+  const tk = todayKey();
+  const t = document.getElementById("month-table");
+  let html = '<thead><tr><th class="date" scope="col">日</th>';
+  BOOLS.forEach(b => html += '<th scope="col" title="' + b.label + '">' + b.short + "</th>");
+  NUMS.forEach(x => html += '<th scope="col" title="' + x.label + '">' + x.short + "</th>");
+  html += "</tr></thead><tbody>";
+  for (let d = 1; d <= n; d++) {
+    const key = dayKey(viewMonth, d);
+    const rec = db[key] || {};
+    const dow = new Date(y, m - 1, d).getDay();
+    const cls = [dow === 0 || dow === 6 ? "weekend" : "", key === tk ? "today" : ""].join(" ").trim();
+    html += '<tr tabindex="0" data-date="' + key + '"' + (cls ? ' class="' + cls + '"' : "") + ">";
+    html += '<td class="date">' + d + '<span class="dow">' + DOW[dow] + "</span></td>";
+    BOOLS.forEach(b => {
+      const v = rec[b.key];
+      html += "<td>" + (v === true ? '<span class="mark yes" role="img" aria-label="' + b.label + '：した"></span>'
+                      : v === false ? '<span class="mark no" role="img" aria-label="' + b.label + '：しなかった"></span>' : "") + "</td>";
+    });
+    NUMS.forEach(x => {
+      const v = rec[x.key];
+      html += '<td class="num">' + (typeof v === "number" && isFinite(v) ? x.fmt(v) : "") + "</td>";
+    });
+    html += "</tr>";
+  }
+  html += "</tbody>";
+  t.innerHTML = html;
+  t.querySelectorAll("tbody tr").forEach(tr => {
+    const go = () => {
+      entryDate = tr.dataset.date;
+      render();
+      document.getElementById("h-entry").scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    tr.addEventListener("click", go);
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+}
+
+/* ── shared scale helper ──────────────────── */
+function domainFor(mdef, vals) {
+  if (mdef.fixed) return mdef.fixed.slice();
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = (hi - lo) || Math.abs(hi) * 0.05 || 1;
+  lo -= span * 0.15; hi += span * 0.15;
+  if (mdef.min === 0 && lo < 0) lo = 0;
+  return [lo, hi];
+}
+
+/* ── month overview: vertical calendar heatmap ── */
+function renderOverview() {
+  const wrap = document.getElementById("overview");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  const [yy, mm] = viewMonth.split("-").map(Number);
+  const tk = todayKey();
+  const todayD = tk.slice(0, 7) === viewMonth ? Number(tk.slice(8)) : 0;
+
+  const domains = {};
+  NUMS.forEach(mdef => {
+    const vals = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
+      if (typeof v === "number" && isFinite(v)) vals.push(v);
+    }
+    domains[mdef.key] = mdef.fixed ? mdef.fixed.slice() : (vals.length ? domainFor(mdef, vals) : [0, 1]);
+  });
+  // sleep-group metrics share one domain (0 → month max) so shades are comparable
+  const sleepKeys = NUMS.filter(x => x.group === "sleep").map(x => x.key);
+  let sleepMax = 0;
+  sleepKeys.forEach(k => {
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[k];
+      if (typeof v === "number" && isFinite(v) && v > sleepMax) sleepMax = v;
+    }
+  });
+  sleepKeys.forEach(k => { domains[k] = [0, sleepMax || 1]; });
+
+  const grid = document.createElement("div");
+  grid.className = "ov-grid";
+
+  const corner = document.createElement("div");
+  grid.appendChild(corner);
+  OV_COLS.forEach(c => {
+    if (!c) { grid.appendChild(Object.assign(document.createElement("div"), { className: "ov-sp" })); return; }
+    const h = document.createElement("div");
+    if (c.sleepbar) {
+      h.className = "ov-h bar";
+      h.textContent = "睡眠 0–" + c.scale + "h";
+      h.title = "睡眠の積み上げ（深い・浅い・レム・覚醒）";
+    } else {
+      h.className = "ov-h";
+      h.textContent = c.short;
+      h.title = c.label;
+      if (c.cvar) h.style.color = "var(" + c.cvar + ")";
+    }
+    grid.appendChild(h);
+  });
+
+  for (let d = 1; d <= n; d++) {
+    const key = dayKey(viewMonth, d);
+    const rec = db[key] || {};
+    const dow = new Date(yy, mm - 1, d).getDay();
+
+    const dt = document.createElement("div");
+    dt.className = "ov-date" + (dow === 0 || dow === 6 ? " we" : "") + (d === todayD ? " today" : "");
+    dt.textContent = d + DOW[dow];
+    dt.dataset.d = d;
+    dt.dataset.tip = "を記入欄へ";
+    grid.appendChild(dt);
+
+    OV_COLS.forEach(c => {
+      if (!c) { grid.appendChild(Object.assign(document.createElement("div"), { className: "ov-sp" })); return; }
+      const cell = document.createElement("div");
+      cell.className = "ov-cell" + (d === todayD ? " today" : "");
+      if (c.sleepbar) {
+        cell.classList.add("ov-bar");
+        const hours = {};
+        let sum = 0;
+        c.segs.forEach(sg => {
+          const sv = rec[sg[0]];
+          if (typeof sv === "number" && isFinite(sv)) { hours[sg[0]] = sv; sum += sv; }
+        });
+        const factor = sum > c.scale ? c.scale / sum : 1;
+        const tips = [];
+        c.segs.forEach(sg => {
+          const sv = hours[sg[0]];
+          if (sv === undefined || sv <= 0) { if (sv !== undefined) tips.push(sg[1] + "0:00"); return; }
+          const seg = document.createElement("div");
+          seg.className = "sb " + sg[0];
+          seg.style.width = (sv * factor / c.scale * 100) + "%";
+          const lb = document.createElement("span");
+          lb.className = "lb";
+          lb.textContent = sv >= 1 ? NUMBYKEY.slp.cellFmt(sv) : Math.round(sv * 60) + "m";
+          seg.appendChild(lb);
+          cell.appendChild(seg);
+          tips.push(sg[1] + NUMBYKEY.slp.cellFmt(sv));
+        });
+        const total = typeof rec.slp === "number" && isFinite(rec.slp) ? rec.slp : (sum > 0 ? sum : null);
+        if (total !== null) {
+          const tot = document.createElement("span");
+          tot.className = "tot";
+          tot.textContent = NUMBYKEY.slp.cellFmt(total);
+          cell.appendChild(tot);
+        }
+        cell.dataset.tip = "睡眠 " + (total !== null ? NUMBYKEY.slp.fmt(total) : "未記入") + (tips.length ? "（" + tips.join(" ") + "）" : "");
+        cell.dataset.d = d;
+        grid.appendChild(cell);
+        return;
+      }
+      const v = rec[c.key];
+      if (!c.bool) {
+        const has = typeof v === "number" && isFinite(v);
+        if (has) {
+          const lo = domains[c.key][0], hi = domains[c.key][1];
+          const t = Math.min(1, Math.max(0, hi === lo ? 1 : (v - lo) / (hi - lo)));
+          const dk = darkMq.matches;
+          const H = c.ramp[0], Lt = dk ? c.ramp[3] : c.ramp[1], Cm = dk ? c.ramp[4] : c.ramp[2];
+          const L0 = dk ? 24 : 90, C0 = dk ? 0.03 : 0.035;
+          const L = Math.round((L0 + (Lt - L0) * t) * 10) / 10;
+          const C = Math.round((C0 + (Cm - C0) * t) * 1000) / 1000;
+          cell.style.background = "oklch(" + L + "% " + C + " " + H + ")";
+          cell.classList.add("num", "fill");
+          if (dk ? L >= 52 : L <= 64) cell.classList.add("hi");
+          cell.textContent = c.cellFmt(v);
+        }
+        cell.dataset.tip = c.label + " " + (has ? c.fmt(v) + (c.unit || "") : "未記入");
+      } else {
+        if (v === true) { cell.style.background = "var(" + (c.cvar || "--color-check") + ")"; cell.classList.add("fill"); }
+        else if (v === false) cell.classList.add("no");
+        cell.dataset.tip = c.label + "：" + (v === true ? "した" : v === false ? "しなかった" : "未記入");
+      }
+      cell.dataset.d = d;
+      grid.appendChild(cell);
+    });
+  }
+
+  grid.addEventListener("click", ev => {
+    const t = ev.target.closest("[data-d]");
+    if (!t) return;
+    const d = Number(t.dataset.d);
+    const rect = t.getBoundingClientRect();
+    showTooltip(mm + "/" + d + " " + t.dataset.tip, ev.clientX, rect.top);
+    entryDate = dayKey(viewMonth, d);
+    readEntryToForm();
+    ev.stopPropagation();
+  });
+
+  wrap.appendChild(grid);
+}
+
+/* ── charts: small multiples ──────────────── */
+const tooltip = document.getElementById("tooltip");
+function showTooltip(text, cx, cy) {
+  tooltip.textContent = text;
+  tooltip.classList.add("shown");
+  const pad = 10;
+  requestAnimationFrame(() => {
+    const r = tooltip.getBoundingClientRect();
+    let x = cx - r.width / 2;
+    x = Math.max(pad, Math.min(window.innerWidth - r.width - pad, x));
+    let yy = cy - r.height - 12;
+    if (yy < pad) yy = cy + 16;
+    tooltip.style.left = x + "px";
+    tooltip.style.top = yy + "px";
+  });
+}
+function hideTooltip() { tooltip.classList.remove("shown"); }
+document.addEventListener("click", e => { if (!e.target.closest(".chart svg")) hideTooltip(); });
+
+function renderCharts() {
+  const wrap = document.getElementById("charts");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  NUMS.forEach(mdef => {
+    const pts = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
+      if (typeof v === "number" && isFinite(v)) pts.push({ d, v });
+    }
+    const div = document.createElement("div");
+    div.className = "chart";
+    div.style.setProperty("--mc", "var(" + mdef.cvar + ")");
+    const h3 = document.createElement("h3");
+    h3.textContent = mdef.label + (mdef.unit ? "（" + mdef.unit + "）" : "");
+    div.appendChild(h3);
+    if (pts.length === 0) {
+      const p = document.createElement("p");
+      p.className = "empty-note";
+      p.textContent = "記録なし";
+      div.appendChild(p);
+      wrap.appendChild(div);
+      return;
+    }
+    const vals = pts.map(p => p.v);
+    const latest = pts[pts.length - 1];
+    const stat = document.createElement("span");
+    stat.className = "stat";
+    stat.textContent = "min " + mdef.fmt(Math.min(...vals)) + " · max " + mdef.fmt(Math.max(...vals)) + " · 最新 " + mdef.fmt(latest.v);
+    h3.appendChild(stat);
+
+    const W = 360, H = 96, ML = 34, MR = 8, MT = 8, MB = 16;
+    const dom = domainFor(mdef, vals);
+    const lo = dom[0], hi = dom[1];
+    const X = d => ML + (d - 1) / (n - 1) * (W - ML - MR);
+    const Y = v => MT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - MT - MB);
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", mdef.label + "の月間推移。詳細は月間一覧の表を参照。");
+
+    [lo, (lo + hi) / 2, hi].forEach((gv, i) => {
+      const yy = Y(gv);
+      const ln = document.createElementNS(svgNS, "line");
+      ln.setAttribute("x1", ML); ln.setAttribute("x2", W - MR);
+      ln.setAttribute("y1", yy); ln.setAttribute("y2", yy);
+      ln.setAttribute("class", "gridline");
+      svg.appendChild(ln);
+      if (i !== 1) {
+        const tx = document.createElementNS(svgNS, "text");
+        tx.setAttribute("x", ML - 4); tx.setAttribute("y", yy + 3);
+        tx.setAttribute("text-anchor", "end");
+        tx.setAttribute("class", "axislabel");
+        tx.textContent = mdef.key === "steps" ? Math.round(gv / 1000) + "k" : mdef.fmt(Math.round(gv * 10) / 10);
+        svg.appendChild(tx);
+      }
+    });
+    [1, Math.round(n / 2), n].forEach(dd => {
+      const tx = document.createElementNS(svgNS, "text");
+      tx.setAttribute("x", X(dd)); tx.setAttribute("y", H - 3);
+      tx.setAttribute("text-anchor", dd === 1 ? "start" : dd === n ? "end" : "middle");
+      tx.setAttribute("class", "axislabel");
+      tx.textContent = dd + "日";
+      svg.appendChild(tx);
+    });
+
+    // consecutive runs → separate polylines (gaps stay gaps)
+    const runs = [];
+    let run = [];
+    pts.forEach(p => {
+      if (run.length && p.d !== run[run.length - 1].d + 1) { runs.push(run); run = []; }
+      run.push(p);
+    });
+    if (run.length) runs.push(run);
+    runs.forEach(r => {
+      if (r.length > 1) {
+        const pl = document.createElementNS(svgNS, "polyline");
+        pl.setAttribute("points", r.map(p => X(p.d).toFixed(1) + "," + Y(p.v).toFixed(1)).join(" "));
+        pl.setAttribute("class", "line");
+        svg.appendChild(pl);
+      }
+    });
+    pts.forEach(p => {
+      const c = document.createElementNS(svgNS, "circle");
+      c.setAttribute("cx", X(p.d)); c.setAttribute("cy", Y(p.v)); c.setAttribute("r", 3);
+      c.setAttribute("class", "pt");
+      svg.appendChild(c);
+      const hit = document.createElementNS(svgNS, "circle");
+      hit.setAttribute("cx", X(p.d)); hit.setAttribute("cy", Y(p.v)); hit.setAttribute("r", 12);
+      hit.setAttribute("class", "hit");
+      hit.addEventListener("click", ev => {
+        ev.stopPropagation();
+        const rect = hit.getBoundingClientRect();
+        showTooltip(viewMonth.split("-")[1].replace(/^0/, "") + "/" + p.d + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
+          rect.left + rect.width / 2, rect.top);
+      });
+      svg.appendChild(hit);
+    });
+    div.appendChild(svg);
+    wrap.appendChild(div);
+  });
+}
+
+/* ── data io ──────────────────────────────── */
+document.getElementById("export-json").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({ app: "score-almanac", version: 1, exported: new Date().toISOString(), data: db }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "score-almanac-" + todayKey() + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("import-json").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  f.text().then(txt => {
+    const obj = JSON.parse(txt);
+    const incoming = obj.data && typeof obj.data === "object" ? obj.data : obj;
+    const count = Object.keys(incoming).length;
+    if (!count) throw new Error("empty");
+    if (!confirm(count + "日分のデータを読み込みます。同じ日付は上書きされます。よろしいですか？")) return;
+    Object.assign(db, incoming);
+    persist();
+    render();
+  }).catch(() => alert("読み込めませんでした。score-almanac のJSONファイルか確認してください。"));
+  e.target.value = "";
+});
+
+/* ── render root ──────────────────────────── */
+function renderMonth() {
+  const [y, m] = viewMonth.split("-").map(Number);
+  document.getElementById("mt-month").textContent = m + "月";
+  document.getElementById("mt-year").textContent = String(y);
+  renderOverview();
+  renderSummary();
+  renderTable();
+  renderCharts();
+}
+function render() { readEntryToForm(); renderMonth(); }
+render();
+</script>
+</body>
+</html>
