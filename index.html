@@ -595,7 +595,6 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
   <section class="ov-section">
     <div id="overview"></div>
     <div class="ov-legend">
-      <span class="ramp" aria-hidden="true"></span><span>濃いほど高い</span>
       <span class="mark sq deep"></span><span>深</span>
       <span class="mark sq light"></span><span>浅</span>
       <span class="mark sq rem"></span><span>レム</span>
@@ -684,7 +683,7 @@ const HM = {
 const NUMS = [
   /* ramp: [hue, topL_light, topC_light, topL_dark, topC_dark] — cell shade runs tint→this endpoint */
   /* 体重: 固定ドメイン60-70kg・2色グラデ 60=#066FCA(青 L54) → 70=#FF6D64(赤 L71) */
-  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    ramp2: { c0: "#066FCA", c1: "#FF6D64", L0: 54, L1: 71 }, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
+  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    ramp2: { c0: "#066FCA", c1: "#FF6D64", L0: 54, L1: 71 }, interp: true, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
   { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   ramp: [275, 44, 0.19, 52, 0.17], fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
   Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
   Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
@@ -917,6 +916,22 @@ function renderOverview() {
     }
     domains[mdef.key] = mdef.fixed ? mdef.fixed.slice() : (vals.length ? domainFor(mdef, vals) : [0, 1]);
   });
+  // linear interpolation between entered days (color-only fill on gap days)
+  const interpMaps = {};
+  NUMS.filter(x => x.interp).forEach(x => {
+    const pts = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[x.key];
+      if (typeof v === "number" && isFinite(v)) pts.push([d, v]);
+    }
+    const map = {};
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [d1, v1] = pts[i], [d2, v2] = pts[i + 1];
+      for (let dd = d1 + 1; dd < d2; dd++) map[dd] = v1 + (v2 - v1) * (dd - d1) / (d2 - d1);
+    }
+    interpMaps[x.key] = map;
+  });
+
   // sleep-group metrics share one domain (0 → month max) so shades are comparable
   const sleepKeys = NUMS.filter(x => x.group === "sleep").map(x => x.key);
   let sleepMax = 0;
@@ -1003,8 +1018,13 @@ function renderOverview() {
         grid.appendChild(cell);
         return;
       }
-      const v = rec[c.key];
+      let v = rec[c.key];
       if (!c.bool) {
+        let isInterp = false;
+        if (!(typeof v === "number" && isFinite(v)) && c.interp && interpMaps[c.key][d] !== undefined) {
+          v = interpMaps[c.key][d];
+          isInterp = true;
+        }
         const has = typeof v === "number" && isFinite(v);
         if (has) {
           const lo = domains[c.key][0], hi = domains[c.key][1];
@@ -1023,9 +1043,9 @@ function renderOverview() {
             cell.style.background = "oklch(" + L + "% " + C + " " + H + ")";
             if (dk ? L >= 52 : L <= 64) cell.classList.add("hi");
           }
-          cell.textContent = c.cellFmt(v);
+          if (!isInterp) cell.textContent = c.cellFmt(v);
         }
-        cell.dataset.tip = c.label + " " + (has ? c.fmt(v) + (c.unit || "") : "未記入");
+        cell.dataset.tip = c.label + " " + (has ? (isInterp ? "約" + c.fmt(Math.round(v * 10) / 10) + (c.unit || "") + "（補間）" : c.fmt(v) + (c.unit || "")) : "未記入");
       } else {
         if (v === true) { cell.style.background = "var(" + (c.cvar || "--color-check") + ")"; cell.classList.add("fill"); }
         else if (v === false) cell.classList.add("no");
