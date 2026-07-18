@@ -118,18 +118,19 @@
 }
 
 * { box-sizing: border-box; margin: 0; }
-html { overflow-x: clip; }
+html { overflow: clip; height: 100%; }
 body {
-  overflow-x: clip;
+  overflow: clip;
+  height: 100dvh;
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--lh-normal);
-  padding: max(var(--space-md), env(safe-area-inset-top)) var(--space-md) calc(var(--space-2xl) + env(safe-area-inset-bottom));
+  padding: max(var(--space-xs), env(safe-area-inset-top)) var(--space-md) max(var(--space-xs), env(safe-area-inset-bottom));
   -webkit-text-size-adjust: 100%;
 }
-main { max-width: 40rem; margin-inline: auto; }
+main { max-width: 40rem; margin-inline: auto; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 
 /* ── masthead ─────────────────────────────── */
 header.masthead {
@@ -165,6 +166,21 @@ header.masthead {
   color: var(--color-muted);
   margin-left: var(--space-2xs);
 }
+.mast-btns { margin-left: auto; display: flex; gap: var(--space-2xs); }
+.mast-btn {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  height: 2rem;
+  padding-inline: var(--space-xs);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.mast-btn:active { transform: translateY(1px); }
 .month-nav { display: flex; gap: var(--space-2xs); }
 .month-nav button {
   font-family: var(--font-label);
@@ -196,9 +212,9 @@ h2 {
 }
 
 /* ── month overview: vertical calendar heatmap ── */
-section.ov-section { margin-bottom: var(--space-lg); }
+section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
 .ov-grid {
-  --ov-cell: clamp(0.875rem, calc((100dvh - 9rem) / 31 - 2px), 1.5rem);
+  --ov-cell: clamp(0.875rem, calc((100dvh - 8rem) / 31 - 2px), 1.75rem);
   display: grid;
   grid-template-columns: 2.6rem repeat(5, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
   gap: 2px;
@@ -503,6 +519,43 @@ details.io summary {
 #io-status { min-height: 1.2em; color: var(--color-accent); font-weight: 500; }
 #io-status.err { color: var(--color-error); }
 
+/* ── modals ───────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  z-index: 400;
+  background: oklch(15% 0.01 270 / 0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  width: 100%; max-width: 40rem;
+  background: var(--color-paper);
+  border-top: var(--rule-fine) solid var(--color-ink);
+  border-radius: 6px 6px 0 0;
+  padding: var(--space-md) var(--space-md) calc(var(--space-lg) + env(safe-area-inset-bottom));
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-md);
+}
+.modal-close {
+  width: 2rem; height: 2rem;
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  font-family: var(--font-label);
+  cursor: pointer;
+}
+.modal .summary { margin-bottom: var(--space-md); }
+
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 
@@ -519,7 +572,10 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
   <header class="masthead">
     <div class="month-row">
       <div class="month-title"><span id="mt-month"></span><span class="yr" id="mt-year"></span></div>
-      <div class="wordmark">Score Almanac</div>
+      <div class="mast-btns">
+        <button class="mast-btn" id="open-charts">グラフ</button>
+        <button class="mast-btn" id="open-data">データ</button>
+      </div>
       <nav class="month-nav" aria-label="月の移動">
         <button id="prev-month" aria-label="前の月">←</button>
         <button id="next-month" aria-label="次の月">→</button>
@@ -527,8 +583,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
     </div>
   </header>
 
-  <section class="ov-section" aria-labelledby="h-ov">
-    <h2 id="h-ov">月間一覧</h2>
+  <section class="ov-section">
     <div id="overview"></div>
     <div class="ov-legend">
       <span class="ramp" aria-hidden="true"></span><span>濃いほど高い</span>
@@ -540,9 +595,14 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <span class="mark no"></span><span>しなかった</span>
     </div>
   </section>
+</main>
 
-  <section aria-labelledby="h-entry">
-    <h2 id="h-entry">記入</h2>
+<div class="modal-backdrop" id="mb-entry" hidden>
+  <div class="modal" role="dialog" aria-labelledby="entry-title">
+    <div class="modal-head">
+      <span id="entry-title">記入</span>
+      <button class="modal-close" data-close="mb-entry" aria-label="閉じる">✕</button>
+    </div>
     <div class="entry-date-row">
       <button class="daystep" id="prev-day" aria-label="前日">‹</button>
       <input type="date" id="entry-date" aria-label="記入する日付">
@@ -551,43 +611,45 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
     </div>
     <div class="toggles" id="toggles"></div>
     <div class="numerics" id="numerics"></div>
-  </section>
+  </div>
+</div>
 
-  <section aria-labelledby="h-summary">
-    <h2 id="h-summary">今月の集計</h2>
+<div class="modal-backdrop" id="mb-charts" hidden>
+  <div class="modal" role="dialog" aria-labelledby="charts-title">
+    <div class="modal-head">
+      <span id="charts-title">集計と推移</span>
+      <button class="modal-close" data-close="mb-charts" aria-label="閉じる">✕</button>
+    </div>
     <p class="summary" id="summary"></p>
-  </section>
-
-  <section aria-labelledby="h-grid">
+    <div id="charts"></div>
     <details class="io">
-      <summary id="h-grid">数値表（日別の全記録）</summary>
+      <summary>数値表（日別の全記録）</summary>
       <div class="gridwrap">
         <table class="month" id="month-table"></table>
       </div>
-      <p class="legend"><span class="mark yes"></span> した ／ <span class="mark no"></span> しなかった ／ 空欄 = 未記入。行をタップすると記入欄に呼び出します。</p>
+      <p class="legend"><span class="mark yes"></span> した ／ <span class="mark no"></span> しなかった ／ 空欄 = 未記入。</p>
     </details>
-  </section>
+  </div>
+</div>
 
-  <section aria-labelledby="h-charts">
-    <h2 id="h-charts">推移</h2>
-    <div id="charts"></div>
-  </section>
+<div class="modal-backdrop" id="mb-data" hidden>
+  <div class="modal" role="dialog" aria-labelledby="data-title">
+    <div class="modal-head">
+      <span id="data-title">Score Almanac — データ</span>
+      <button class="modal-close" data-close="mb-data" aria-label="閉じる">✕</button>
+    </div>
+    <div class="io-row">
+      <button id="export-json">JSONを書き出す</button>
+      <button id="copy-json">コピー</button>
+      <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept=".json,application/json,text/plain"></label>
+      <button id="paste-json">貼り付けで読み込む</button>
+    </div>
+    <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
+    <div class="io-row" id="undo-row" hidden><button id="undo-import">読み込みを元に戻す</button></div>
+    <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
+  </div>
+</div>
 
-  <section>
-    <details class="io">
-      <summary>データの書き出し・読み込み</summary>
-      <div class="io-row">
-        <button id="export-json">JSONを書き出す</button>
-        <button id="copy-json">コピー</button>
-        <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept=".json,application/json,text/plain"></label>
-        <button id="paste-json">貼り付けで読み込む</button>
-      </div>
-      <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
-      <div class="io-row" id="undo-row" hidden><button id="undo-import">読み込みを元に戻す</button></div>
-      <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
-    </details>
-  </section>
-</main>
 <div id="tooltip" role="status"></div>
 
 <script>
@@ -678,6 +740,8 @@ NUMS.forEach(n => {
 
 function readEntryToForm() {
   dateEl.value = entryDate;
+  const tp = entryDate.split("-").map(Number);
+  document.getElementById("entry-title").textContent = tp[1] + "月" + tp[2] + "日（" + DOW[new Date(tp[0], tp[1] - 1, tp[2]).getDay()] + "）の記入";
   const rec = db[entryDate] || {};
   togglesEl.querySelectorAll("input").forEach(i => { i.checked = rec[i.dataset.key] === true; });
   numericsEl.querySelectorAll("input").forEach(i => {
@@ -727,6 +791,20 @@ function stepDay(delta) {
 }
 document.getElementById("prev-day").addEventListener("click", () => stepDay(-1));
 document.getElementById("next-day").addEventListener("click", () => stepDay(1));
+
+/* ── modals ───────────────────────────────── */
+function openModal(id) { document.getElementById(id).hidden = false; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
+document.querySelectorAll(".modal-close").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
+document.querySelectorAll(".modal-backdrop").forEach(bd => bd.addEventListener("click", e => { if (e.target === bd) bd.hidden = true; }));
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal-backdrop").forEach(bd => bd.hidden = true); });
+document.getElementById("open-charts").addEventListener("click", () => openModal("mb-charts"));
+document.getElementById("open-data").addEventListener("click", () => openModal("mb-data"));
+function openEntry(dateKey) {
+  entryDate = dateKey;
+  readEntryToForm();
+  openModal("mb-entry");
+}
 
 /* ── month navigation ─────────────────────── */
 function stepMonth(delta) {
@@ -794,11 +872,7 @@ function renderTable() {
   html += "</tbody>";
   t.innerHTML = html;
   t.querySelectorAll("tbody tr").forEach(tr => {
-    const go = () => {
-      entryDate = tr.dataset.date;
-      render();
-      document.getElementById("h-entry").scrollIntoView({ behavior: "smooth", block: "start" });
-    };
+    const go = () => openEntry(tr.dataset.date);
     tr.addEventListener("click", go);
     tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
   });
@@ -946,10 +1020,12 @@ function renderOverview() {
     const t = ev.target.closest("[data-d]");
     if (!t) return;
     const d = Number(t.dataset.d);
-    const rect = t.getBoundingClientRect();
-    showTooltip(mm + "/" + d + " " + t.dataset.tip, ev.clientX, rect.top);
-    entryDate = dayKey(viewMonth, d);
-    readEntryToForm();
+    if (t.classList.contains("ov-date")) {
+      openEntry(dayKey(viewMonth, d));
+    } else {
+      const rect = t.getBoundingClientRect();
+      showTooltip(mm + "/" + d + " " + t.dataset.tip, ev.clientX, rect.top);
+    }
     ev.stopPropagation();
   });
 
