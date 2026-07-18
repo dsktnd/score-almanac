@@ -246,14 +246,6 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
   border-radius: 1px; min-width: 0; height: var(--ov-cell);
 }
 .ov-cell.fill { box-shadow: none; }
-.ov-cell.no { display: flex; align-items: center; justify-content: center; }
-.ov-cell.no::after {
-  content: "";
-  width: 18%; height: 18%;
-  min-width: 2px; min-height: 2px;
-  border-radius: 50%;
-  background: var(--color-muted);
-}
 .ov-cell.today { box-shadow: inset 0 0 0 1px var(--color-accent); }
 .ov-cell.num {
   display: flex; align-items: center; justify-content: center;
@@ -600,7 +592,6 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <span class="mark sq rem"></span><span>レム</span>
       <span class="mark sq wake"></span><span>覚醒</span>
       <span class="mark yes"></span><span>した</span>
-      <span class="mark no"></span><span>しなかった</span>
       <span class="mark alcline"></span><span>前日飲酒</span>
     </div>
   </section>
