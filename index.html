@@ -282,9 +282,9 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
   font-variant-numeric: tabular-nums;
 }
 .ov-bar .sb .lb { position: relative; z-index: 1; }
-.ov-bar .sb.deep, .ov-bar .sb.light, .ov-bar .sb.wake { color: var(--sb-text-on-dark); }
-.ov-bar .sb.deep .lb, .ov-bar .sb.light .lb, .ov-bar .sb.wake .lb { text-shadow: 0 1px 2px oklch(30% 0.05 300 / 0.6); }
-.ov-bar .sb.rem { color: var(--sb-text-on-light); }
+.ov-bar .sb { color: var(--sb-text-on-light); }
+.ov-bar .sb.lt { color: var(--sb-text-on-dark); }
+.ov-bar .sb.lt .lb { text-shadow: 0 1px 2px oklch(30% 0.05 300 / 0.6); }
 .ov-bar .sb.deep  { background: var(--sb-deep); }
 .ov-bar .sb.light { background: var(--sb-light); }
 .ov-bar .sb.rem   { background: var(--sb-rem); }
@@ -556,6 +556,37 @@ details.io summary {
   cursor: pointer;
 }
 .modal .summary { margin-bottom: var(--space-md); }
+.set-group { margin-bottom: var(--space-md); }
+.set-group h3 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-xs);
+}
+.set-row { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-2xs); }
+.set-row label { flex: 1; font-size: var(--text-sm); }
+.set-row input[type="number"] {
+  width: 5.5rem;
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-2xs) var(--space-xs);
+  min-height: 2.25rem;
+}
+.set-row input[type="color"] {
+  width: 2.75rem; height: 2.25rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: none;
+  padding: 2px;
+}
 
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
@@ -576,6 +607,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <div class="mast-btns">
         <button class="mast-btn" id="open-charts">グラフ</button>
         <button class="mast-btn" id="open-data">データ</button>
+        <button class="mast-btn" id="open-set" aria-label="設定">⚙</button>
       </div>
       <nav class="month-nav" aria-label="月の移動">
         <button id="prev-month" aria-label="前の月">←</button>
@@ -646,6 +678,40 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
     <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
     <div class="io-row" id="undo-row" hidden><button id="undo-import">読み込みを元に戻す</button></div>
     <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-set" hidden>
+  <div class="modal" role="dialog" aria-labelledby="set-title">
+    <div class="modal-head">
+      <span id="set-title">設定 — 色とドメイン</span>
+      <button class="modal-close" data-close="mb-set" aria-label="閉じる">✕</button>
+    </div>
+    <div class="set-group">
+      <h3>体重（kg）</h3>
+      <div class="set-row"><label for="cfg-wt-min">下限（この値以下の色）</label><input type="number" id="cfg-wt-min" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c0"></div>
+      <div class="set-row"><label for="cfg-wt-max">上限（この値以上の色）</label><input type="number" id="cfg-wt-max" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c1"></div>
+    </div>
+    <div class="set-group">
+      <h3>リカバー度（0–100）</h3>
+      <div class="set-row"><label for="cfg-rec-c">100の色（0は背景色）</label><input type="color" id="cfg-rec-c"></div>
+    </div>
+    <div class="set-group">
+      <h3>歩数（3段階・最下段未満は1色目のまま）</h3>
+      <div class="set-row"><label for="cfg-st-v0">段階1（歩）</label><input type="number" id="cfg-st-v0" step="500" inputmode="numeric"><input type="color" id="cfg-st-c0"></div>
+      <div class="set-row"><label for="cfg-st-v1">段階2（歩）</label><input type="number" id="cfg-st-v1" step="500" inputmode="numeric"><input type="color" id="cfg-st-c1"></div>
+      <div class="set-row"><label for="cfg-st-v2">段階3＝上限（歩）</label><input type="number" id="cfg-st-v2" step="500" inputmode="numeric"><input type="color" id="cfg-st-c2"></div>
+    </div>
+    <div class="set-group">
+      <h3>睡眠バー</h3>
+      <div class="set-row"><label for="cfg-sb-scale">バーの目盛り上限（時間）</label><input type="number" id="cfg-sb-scale" min="6" max="24" step="1" inputmode="numeric"></div>
+      <div class="set-row"><label for="cfg-sb-deep">深い睡眠</label><input type="color" id="cfg-sb-deep"></div>
+      <div class="set-row"><label for="cfg-sb-light">浅い睡眠</label><input type="color" id="cfg-sb-light"></div>
+      <div class="set-row"><label for="cfg-sb-rem">レム睡眠</label><input type="color" id="cfg-sb-rem"></div>
+      <div class="set-row"><label for="cfg-sb-wake">覚醒</label><input type="color" id="cfg-sb-wake"></div>
+    </div>
+    <div class="io-row"><button id="cfg-reset">初期設定に戻す</button></div>
+    <p class="io-note">変更は即時保存され、グリッドとグラフに反映されます。</p>
   </div>
 </div>
 
@@ -802,6 +868,7 @@ document.querySelectorAll(".modal-backdrop").forEach(bd => bd.addEventListener("
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal-backdrop").forEach(bd => bd.hidden = true); });
 document.getElementById("open-charts").addEventListener("click", () => openModal("mb-charts"));
 document.getElementById("open-data").addEventListener("click", () => openModal("mb-data"));
+document.getElementById("open-set").addEventListener("click", () => openModal("mb-set"));
 function openEntry(dateKey) {
   entryDate = dateKey;
   readEntryToForm();
@@ -989,7 +1056,7 @@ function renderOverview() {
           const sv = hours[sg[0]];
           if (sv === undefined || sv <= 0) { if (sv !== undefined) tips.push(sg[1] + "0:00"); return; }
           const seg = document.createElement("div");
-          seg.className = "sb " + sg[0];
+          seg.className = "sb " + sg[0] + (hexL(cfg.sleep[sg[0]]) < 64 ? " lt" : "");
           seg.style.width = (sv * factor / c.scale * 100) + "%";
           const lb = document.createElement("span");
           lb.className = "lb";
@@ -1265,6 +1332,104 @@ document.getElementById("paste-json").addEventListener("click", () => {
     .catch(() => setIo("エラー：クリップボードを読めませんでした。もう一度ボタンを押して、許可ダイアログが出たら許可してください。", true));
 });
 
+/* ── settings: user colors & domains ──────── */
+const CFG_KEY = STORE_KEY + ":cfg";
+const DEFAULT_CFG = {
+  wt: { min: 60, max: 70, c0: "#066fca", c1: "#ff6d64" },
+  rec: { c: "#ff499e" },
+  steps: { s: [{ v: 2000, c: "#49b6ff" }, { v: 5000, c: "#a480cf" }, { v: 10000, c: "#ff499e" }] },
+  sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca" },
+};
+function loadCfg() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { c = {}; }
+  return {
+    wt: Object.assign({}, DEFAULT_CFG.wt, c.wt),
+    rec: Object.assign({}, DEFAULT_CFG.rec, c.rec),
+    steps: { s: (c.steps && Array.isArray(c.steps.s) && c.steps.s.length === 3) ? c.steps.s : DEFAULT_CFG.steps.s.map(x => Object.assign({}, x)) },
+    sleep: Object.assign({}, DEFAULT_CFG.sleep, c.sleep),
+  };
+}
+let cfg = loadCfg();
+function hexL(hex) {
+  const p = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(x => x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  const l = 0.4122214708 * p[0] + 0.5363325363 * p[1] + 0.0514459929 * p[2];
+  const m = 0.2119034982 * p[0] + 0.6806995451 * p[1] + 0.1073969566 * p[2];
+  const s = 0.0883024619 * p[0] + 0.2817188376 * p[1] + 0.6299787005 * p[2];
+  return Math.round((0.2104542553 * Math.cbrt(l) + 0.7936177850 * Math.cbrt(m) - 0.0040720468 * Math.cbrt(s)) * 100);
+}
+function applyCfg() {
+  const w = cfg.wt;
+  const lo2 = Math.min(w.min, w.max), hi2 = Math.max(w.min, w.max);
+  NUMBYKEY.wt.fixed = [lo2, hi2 === lo2 ? lo2 + 1 : hi2];
+  NUMBYKEY.wt.stops = [{ t: 0, c: w.c0, L: hexL(w.c0) }, { t: 1, c: w.c1, L: hexL(w.c1) }];
+  NUMBYKEY.rec.mix = { c: cfg.rec.c, L: hexL(cfg.rec.c) };
+  const ss = cfg.steps.s.slice().sort((a, b) => a.v - b.v);
+  const top = ss[2].v > 0 ? ss[2].v : 1;
+  NUMBYKEY.steps.fixed = [0, top];
+  NUMBYKEY.steps.stops = ss.map(x => ({ t: Math.min(1, x.v / top), c: x.c, L: hexL(x.c) }));
+  SLEEP_BAR.scale = cfg.sleep.scale;
+  const rt = document.documentElement.style;
+  rt.setProperty("--sb-deep", cfg.sleep.deep);
+  rt.setProperty("--sb-light", cfg.sleep.light);
+  rt.setProperty("--sb-rem", cfg.sleep.rem);
+  rt.setProperty("--sb-wake", cfg.sleep.wake);
+  rt.setProperty("--c-wt", w.c1);
+  rt.setProperty("--c-rec", cfg.rec.c);
+  rt.setProperty("--c-steps", ss[2].c);
+}
+const CFG_IDS = {
+  "cfg-wt-min": ["wt", "min", "num"], "cfg-wt-max": ["wt", "max", "num"],
+  "cfg-wt-c0": ["wt", "c0", "col"], "cfg-wt-c1": ["wt", "c1", "col"],
+  "cfg-rec-c": ["rec", "c", "col"],
+  "cfg-sb-scale": ["sleep", "scale", "num"],
+  "cfg-sb-deep": ["sleep", "deep", "col"], "cfg-sb-light": ["sleep", "light", "col"],
+  "cfg-sb-rem": ["sleep", "rem", "col"], "cfg-sb-wake": ["sleep", "wake", "col"],
+};
+function fillCfgForm() {
+  Object.keys(CFG_IDS).forEach(id => {
+    const [g, k] = CFG_IDS[id];
+    document.getElementById(id).value = cfg[g][k];
+  });
+  cfg.steps.s.forEach((x, i) => {
+    document.getElementById("cfg-st-v" + i).value = x.v;
+    document.getElementById("cfg-st-c" + i).value = x.c;
+  });
+}
+document.getElementById("mb-set").addEventListener("change", e => {
+  const id = e.target.id;
+  if (CFG_IDS[id]) {
+    const [g, k, ty] = CFG_IDS[id];
+    if (ty === "num") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v)) { fillCfgForm(); return; }
+      cfg[g][k] = v;
+    } else {
+      cfg[g][k] = e.target.value;
+    }
+  } else if (/^cfg-st-[vc][012]$/.test(id)) {
+    const i = Number(id.slice(-1));
+    if (id[7] === "v") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v) || v < 0) { fillCfgForm(); return; }
+      cfg.steps.s[i].v = v;
+    } else {
+      cfg.steps.s[i].c = e.target.value;
+    }
+  } else return;
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  applyCfg();
+  renderMonth();
+});
+document.getElementById("cfg-reset").addEventListener("click", () => {
+  localStorage.removeItem(CFG_KEY);
+  cfg = loadCfg();
+  fillCfgForm();
+  applyCfg();
+  renderMonth();
+});
+
 /* ── render root ──────────────────────────── */
 function renderMonth() {
   const [y, m] = viewMonth.split("-").map(Number);
@@ -1276,6 +1441,8 @@ function renderMonth() {
   renderCharts();
 }
 function render() { readEntryToForm(); renderMonth(); }
+applyCfg();
+fillCfgForm();
 render();
 </script>
 </body>
