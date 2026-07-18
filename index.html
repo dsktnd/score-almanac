@@ -583,6 +583,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
         <button id="paste-json">貼り付けで読み込む</button>
       </div>
       <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
+      <div class="io-row" id="undo-row" hidden><button id="undo-import">読み込みを元に戻す</button></div>
       <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
     </details>
   </section>
@@ -1112,7 +1113,7 @@ function importText(txt) {
   const incoming = obj && obj.data && typeof obj.data === "object" ? obj.data : obj;
   const keys = Object.keys(incoming || {}).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
   if (!keys.length) { setIo("エラー：日付データが0件でした。書き出し元の画面にデータが入っているか確認してください。", true); return; }
-  if (!confirm(keys.length + "日分のデータを読み込みます。同じ日付は上書きされます。よろしいですか？")) { setIo("読み込みをキャンセルしました。"); return; }
+  localStorage.setItem(STORE_KEY + ":undo", JSON.stringify(db));
   keys.forEach(k => { db[k] = incoming[k]; });
   persist();
   keys.sort();
@@ -1120,8 +1121,18 @@ function importText(txt) {
   entryDate = latest;
   viewMonth = latest.slice(0, 7);
   render();
-  setIo("✓ " + keys.length + "日分を読み込みました（" + keys[0] + "〜" + latest + "）。");
+  setIo("✓ " + keys.length + "日分を読み込みました（" + keys[0] + "〜" + latest + "）。同じ日付は上書きしています。");
+  document.getElementById("undo-row").hidden = false;
 }
+document.getElementById("undo-import").addEventListener("click", () => {
+  const prev = localStorage.getItem(STORE_KEY + ":undo");
+  if (prev === null) { setIo("戻せる状態がありません。", true); return; }
+  try { db = JSON.parse(prev) || {}; } catch { setIo("エラー：復元データが壊れています。", true); return; }
+  persist();
+  render();
+  document.getElementById("undo-row").hidden = true;
+  setIo("読み込み前の状態に戻しました。");
+});
 document.getElementById("import-json").addEventListener("change", e => {
   const f = e.target.files[0];
   if (!f) { setIo("ファイルが選択されませんでした。", true); return; }
