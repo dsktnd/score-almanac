@@ -54,6 +54,7 @@
   --sb-wake:  #066FCA;
   --sb-text-on-dark:  oklch(97% 0 0);
   --sb-text-on-light: oklch(22% 0.02 270);
+  --alc-line: #ffffff;
 
   --font-display: "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
   --font-body:    "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
@@ -295,7 +296,7 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
   position: absolute;
   left: -2px; top: 0; bottom: 0;
   width: 2px;
-  background: oklch(100% 0 0);
+  background: var(--alc-line);
   z-index: 1;
 }
 .ov-bar .tot {
@@ -448,7 +449,7 @@ table.month tr:active td { background: var(--color-paper-2); }
 }
 .mark.no::after { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--color-muted); }
 .mark.blank { border: var(--rule-hair) solid var(--color-rule); }
-.mark.alcline { width: 2px; height: 0.75rem; border-radius: 0; background: oklch(100% 0 0); box-shadow: 0 0 0 1px var(--color-rule); }
+.mark.alcline { width: 2px; height: 0.75rem; border-radius: 0; background: var(--alc-line); box-shadow: 0 0 0 1px var(--color-rule); }
 .legend {
   font-family: var(--font-label);
   font-size: var(--text-xs);
@@ -709,6 +710,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <div class="set-row"><label for="cfg-sb-light">浅い睡眠</label><input type="color" id="cfg-sb-light"></div>
       <div class="set-row"><label for="cfg-sb-rem">レム睡眠</label><input type="color" id="cfg-sb-rem"></div>
       <div class="set-row"><label for="cfg-sb-wake">覚醒</label><input type="color" id="cfg-sb-wake"></div>
+      <div class="set-row"><label for="cfg-sb-alcline">前日飲酒ライン</label><input type="color" id="cfg-sb-alcline"></div>
     </div>
     <div class="io-row"><button id="cfg-reset">初期設定に戻す</button></div>
     <p class="io-note">変更は即時保存され、グリッドとグラフに反映されます。</p>
@@ -1338,7 +1340,7 @@ const DEFAULT_CFG = {
   wt: { min: 60, max: 70, c0: "#066fca", c1: "#ff6d64" },
   rec: { c: "#ff499e" },
   steps: { s: [{ v: 2000, c: "#49b6ff" }, { v: 5000, c: "#a480cf" }, { v: 10000, c: "#ff499e" }] },
-  sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca" },
+  sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca", alcline: "#ffffff" },
 };
 function loadCfg() {
   let c = {};
@@ -1375,6 +1377,7 @@ function applyCfg() {
   rt.setProperty("--sb-light", cfg.sleep.light);
   rt.setProperty("--sb-rem", cfg.sleep.rem);
   rt.setProperty("--sb-wake", cfg.sleep.wake);
+  rt.setProperty("--alc-line", cfg.sleep.alcline);
   rt.setProperty("--c-wt", w.c1);
   rt.setProperty("--c-rec", cfg.rec.c);
   rt.setProperty("--c-steps", ss[2].c);
@@ -1386,6 +1389,7 @@ const CFG_IDS = {
   "cfg-sb-scale": ["sleep", "scale", "num"],
   "cfg-sb-deep": ["sleep", "deep", "col"], "cfg-sb-light": ["sleep", "light", "col"],
   "cfg-sb-rem": ["sleep", "rem", "col"], "cfg-sb-wake": ["sleep", "wake", "col"],
+  "cfg-sb-alcline": ["sleep", "alcline", "col"],
 };
 function fillCfgForm() {
   Object.keys(CFG_IDS).forEach(id => {
