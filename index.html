@@ -46,6 +46,7 @@
   --c-bed:   oklch(57% 0.120 275);
   --c-alc:   oklch(70% 0.090 275);
   --color-check: oklch(48% 0.006 270);
+  --color-error: oklch(52% 0.190 25);
   /* sleep stacked-bar segments — user-specified flat colors, both modes */
   --sb-deep:  #6f2dbd;
   --sb-light: #a663cc;
@@ -111,6 +112,7 @@
     --c-bed:   oklch(62% 0.120 275);
     --c-alc:   oklch(74% 0.090 275);
     --color-check: oklch(68% 0.006 270);
+    --color-error: oklch(68% 0.170 25);
   }
   body { font-weight: 350; }
 }
@@ -498,6 +500,8 @@ details.io summary {
 .io-row button:active, .io-row label.filebtn:active { transform: translateY(1px); }
 .io-row input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .io-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+#io-status { min-height: 1.2em; color: var(--color-accent); font-weight: 500; }
+#io-status.err { color: var(--color-error); }
 
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
@@ -574,8 +578,11 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <summary>データの書き出し・読み込み</summary>
       <div class="io-row">
         <button id="export-json">JSONを書き出す</button>
-        <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept="application/json"></label>
+        <button id="copy-json">コピー</button>
+        <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept=".json,application/json,text/plain"></label>
+        <button id="paste-json">貼り付けで読み込む</button>
       </div>
+      <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
       <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
     </details>
   </section>
@@ -1073,28 +1080,60 @@ function renderCharts() {
 }
 
 /* ── data io ──────────────────────────────── */
+const ioStatus = document.getElementById("io-status");
+function setIo(msg, isErr) {
+  ioStatus.textContent = msg;
+  ioStatus.classList.toggle("err", !!isErr);
+}
+function exportPayload() {
+  return JSON.stringify({ app: "score-almanac", version: 1, exported: new Date().toISOString(), data: db }, null, 1);
+}
 document.getElementById("export-json").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ app: "score-almanac", version: 1, exported: new Date().toISOString(), data: db }, null, 1)], { type: "application/json" });
+  const blob = new Blob([exportPayload()], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "score-almanac-" + todayKey() + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
+  setIo(Object.keys(db).length + "日分をファイルに書き出しました。");
 });
+document.getElementById("copy-json").addEventListener("click", () => {
+  const n = Object.keys(db).length;
+  if (!n) { setIo("この画面にはまだデータがありません。", true); return; }
+  navigator.clipboard.writeText(exportPayload())
+    .then(() => setIo(n + "日分をコピーしました。iPhone側で「貼り付けで読み込む」を押してください。"))
+    .catch(() => setIo("コピーできませんでした。「JSONを書き出す」を使ってください。", true));
+});
+function importText(txt) {
+  setIo("読み込み中…");
+  let obj;
+  try { obj = JSON.parse(txt); }
+  catch { setIo("エラー：JSONとして解釈できません。コピー/ファイルの中身を確認してください。", true); return; }
+  const incoming = obj && obj.data && typeof obj.data === "object" ? obj.data : obj;
+  const keys = Object.keys(incoming || {}).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+  if (!keys.length) { setIo("エラー：日付データが0件でした。書き出し元の画面にデータが入っているか確認してください。", true); return; }
+  if (!confirm(keys.length + "日分のデータを読み込みます。同じ日付は上書きされます。よろしいですか？")) { setIo("読み込みをキャンセルしました。"); return; }
+  keys.forEach(k => { db[k] = incoming[k]; });
+  persist();
+  keys.sort();
+  const latest = keys[keys.length - 1];
+  entryDate = latest;
+  viewMonth = latest.slice(0, 7);
+  render();
+  setIo("✓ " + keys.length + "日分を読み込みました（" + keys[0] + "〜" + latest + "）。");
+}
 document.getElementById("import-json").addEventListener("change", e => {
   const f = e.target.files[0];
-  if (!f) return;
-  f.text().then(txt => {
-    const obj = JSON.parse(txt);
-    const incoming = obj.data && typeof obj.data === "object" ? obj.data : obj;
-    const count = Object.keys(incoming).length;
-    if (!count) throw new Error("empty");
-    if (!confirm(count + "日分のデータを読み込みます。同じ日付は上書きされます。よろしいですか？")) return;
-    Object.assign(db, incoming);
-    persist();
-    render();
-  }).catch(() => alert("読み込めませんでした。score-almanac のJSONファイルか確認してください。"));
+  if (!f) { setIo("ファイルが選択されませんでした。", true); return; }
+  setIo("読み込み中…（" + f.name + "）");
+  f.text().then(importText).catch(() => setIo("エラー：ファイルを読めませんでした。", true));
   e.target.value = "";
+});
+document.getElementById("paste-json").addEventListener("click", () => {
+  setIo("クリップボードを確認中…");
+  navigator.clipboard.readText()
+    .then(txt => { if (!txt) { setIo("エラー：クリップボードが空です。Mac側で「コピー」を押してから試してください。", true); return; } importText(txt); })
+    .catch(() => setIo("エラー：クリップボードを読めませんでした。もう一度ボタンを押して、許可ダイアログが出たら許可してください。", true));
 });
 
 /* ── render root ──────────────────────────── */
