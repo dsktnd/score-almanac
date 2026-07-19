@@ -27,6 +27,7 @@
   --color-paper-2:  oklch(89%  0.004 270);
   --color-paper-3:  oklch(84%  0.005 270);
   --color-rule:     oklch(73%  0.006 270);
+  --color-cellrule: oklch(81%  0.005 270);
   --color-rule-2:   oklch(40%  0.008 270);
   --color-muted:    oklch(46%  0.008 270);
   --color-neutral:  oklch(30%  0.008 270);
@@ -94,6 +95,7 @@
     --color-paper-2:  oklch(20%  0.004 270);
     --color-paper-3:  oklch(26%  0.005 270);
     --color-rule:     oklch(36%  0.006 270);
+    --color-cellrule: oklch(28%  0.005 270);
     --color-rule-2:   oklch(72%  0.006 270);
     --color-muted:    oklch(68%  0.006 270);
     --color-neutral:  oklch(80%  0.005 270);
@@ -243,7 +245,7 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
 .ov-date.today { color: var(--color-accent); font-weight: 500; }
 .ov-cell {
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--color-rule);
+  box-shadow: inset 0 0 0 1px var(--color-cellrule);
   border-radius: calc(var(--ov-cell) / 5); min-width: 0; height: var(--ov-cell);
 }
 .ov-cell.fill { box-shadow: none; }
