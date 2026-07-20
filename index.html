@@ -475,8 +475,7 @@ table.month tr:active td { background: var(--color-paper-2); }
 .chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
 .chart .gridline { stroke: var(--color-paper-3); stroke-width: 1; }
 .chart .axislabel { fill: var(--color-muted); font-family: var(--font-label); font-size: 9px; }
-.chart .axh { font-size: var(--text-base); }
-.chart .avgl { fill: var(--color-accent); }
+.chart .avgl { fill: #ff499e; }
 .chart .line { stroke: var(--mc, var(--color-chart)); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
 .chart .area { fill: var(--color-chart-soft); }
 .chart .pt { fill: var(--mc, var(--color-chart)); stroke: var(--color-paper); stroke-width: 2; }
@@ -974,7 +973,7 @@ function renderSleep() {
   const span = hi - lo;
   const step = 3;
 
-  const W = 360, ML = 30, MR = 8, MT = 22, MB = 20, RH = 13;
+  const W = 360, ML = 30, MR = 8, MT = 14, MB = 14, RH = 13;
   const H = MT + n * RH + MB;
   const X = h => ML + (Math.min(hi, Math.max(lo, h)) - lo) / span * (W - ML - MR);
   const svgNS = "http://www.w3.org/2000/svg";
@@ -991,9 +990,9 @@ function renderSleep() {
     ln.setAttribute("class", "gridline");
     svg.appendChild(ln);
     const tx = document.createElementNS(svgNS, "text");
-    tx.setAttribute("x", x); tx.setAttribute("y", 15);
+    tx.setAttribute("x", x); tx.setAttribute("y", 9);
     tx.setAttribute("text-anchor", "middle");
-    tx.setAttribute("class", "axislabel axh");
+    tx.setAttribute("class", "axislabel");
     tx.textContent = ((h % 24) + 24) % 24 + "時";
     svg.appendChild(tx);
   }
@@ -1007,13 +1006,13 @@ function renderSleep() {
     const ln = document.createElementNS(svgNS, "line");
     ln.setAttribute("x1", x); ln.setAttribute("x2", x);
     ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB + 3);
-    ln.setAttribute("stroke-dasharray", "4 3");
-    ln.setAttribute("style", "stroke: var(--color-accent); stroke-width: 1");
+    ln.setAttribute("stroke-dasharray", "1.5 2.5");
+    ln.setAttribute("style", "stroke: #ff499e; stroke-width: 1");
     svg.appendChild(ln);
     const tx = document.createElementNS(svgNS, "text");
     tx.setAttribute("x", x); tx.setAttribute("y", H - 4);
     tx.setAttribute("text-anchor", "middle");
-    tx.setAttribute("class", "axislabel axh avgl");
+    tx.setAttribute("class", "axislabel avgl");
     tx.textContent = lb + "平均 " + clk(avg);
     svg.appendChild(tx);
   });
