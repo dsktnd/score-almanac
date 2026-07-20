@@ -38,6 +38,7 @@
   --color-chart-soft: oklch(58% 0.240 355 / 0.14);
   --c-wt:    oklch(55% 0.180 26);
   --c-rec:   oklch(58% 0.210 356);
+  --c-slps:  oklch(47% 0.208 299);
   --c-slp:   oklch(58% 0.130 302);
   --c-wake:  oklch(54% 0.163 253);
   --c-rem:   oklch(48% 0.110 251);
@@ -106,6 +107,7 @@
     --color-chart-soft: oklch(66% 0.230 355 / 0.18);
     --c-wt:    oklch(71% 0.180 26);
     --c-rec:   oklch(69% 0.228 356);
+    --c-slps:  oklch(56% 0.190 299);
     --c-slp:   oklch(73% 0.100 302);
     --c-wake:  oklch(64% 0.140 253);
     --c-rem:   oklch(85% 0.046 251);
@@ -219,7 +221,7 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
 .ov-grid {
   --ov-cell: clamp(0.875rem, calc((100dvh - 8rem) / 31 - 2px), 1.75rem);
   display: grid;
-  grid-template-columns: 2.6rem repeat(5, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
+  grid-template-columns: 2.2rem repeat(6, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
   gap: 2px;
   justify-content: start;
   cursor: pointer;
@@ -237,8 +239,8 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
   font-family: var(--font-label);
   font-size: 0.5625rem;
   color: var(--color-muted);
-  display: flex; align-items: center;
-  padding-left: 2px;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 3px;
   white-space: nowrap;
 }
 .ov-date.we { color: var(--color-accent); }
@@ -700,6 +702,10 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <div class="set-row"><label for="cfg-rec-c">100の色（0は背景色）</label><input type="color" id="cfg-rec-c"></div>
     </div>
     <div class="set-group">
+      <h3>睡眠スコア（0–100）</h3>
+      <div class="set-row"><label for="cfg-slps-c">100の色（0は背景色）</label><input type="color" id="cfg-slps-c"></div>
+    </div>
+    <div class="set-group">
       <h3>歩数（3段階・最下段未満は1色目のまま）</h3>
       <div class="set-row"><label for="cfg-st-v0">段階1（歩）</label><input type="number" id="cfg-st-v0" step="500" inputmode="numeric"><input type="color" id="cfg-st-c0"></div>
       <div class="set-row"><label for="cfg-st-v1">段階2（歩）</label><input type="number" id="cfg-st-v1" step="500" inputmode="numeric"><input type="color" id="cfg-st-c1"></div>
@@ -746,6 +752,8 @@ const NUMS = [
   { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    stops: [{ t: 0, c: "#066FCA", L: 54 }, { t: 1, c: "#FF6D64", L: 71 }], interp: true, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
   /* リカバー度: 0=背景色 → 100=#ff499e(桃 L69) */
   { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   mix: { c: "#ff499e", L: 69 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
+  /* 睡眠スコア: 0=背景色 → 100=#6f2dbd(深い眠りの紫 L47) */
+  { key: "slps",  label: "睡眠スコア", short: "眠ス", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-slps",  mix: { c: "#6f2dbd", L: 47 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
   Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
   Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
   Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
@@ -760,8 +768,8 @@ darkMq.addEventListener("change", () => renderMonth());
 const SLEEP_BAR = { sleepbar: true, scale: 10, segs: [["deep", "深"], ["light", "浅"], ["rem", "レ"], ["wake", "覚"]] };
 const NUMBYKEY = {};
 NUMS.forEach(n => NUMBYKEY[n.key] = n);
-/* overview columns: 体重・歩 | 酒・ベッド・リカ・睡眠バー(数字内包) | サ・英 */
-const OV_COLS = [NUMS[0], NUMS[7], BOOLS[1], BOOLS[0], NUMS[1], SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
+/* overview columns: 体重・歩 | 酒・ベッド・リカ・眠ス・睡眠バー(数字内包) | サ・英 */
+const OV_COLS = [NUMS[0], NUMS[8], BOOLS[1], BOOLS[0], NUMS[1], NUMS[2], SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
 const DOW = ["日", "月", "火", "水", "木", "金", "土"];
 
 let db = load();
@@ -1341,6 +1349,7 @@ const CFG_KEY = STORE_KEY + ":cfg";
 const DEFAULT_CFG = {
   wt: { min: 60, max: 70, c0: "#066fca", c1: "#ff6d64" },
   rec: { c: "#ff499e" },
+  slps: { c: "#6f2dbd" },
   steps: { s: [{ v: 2000, c: "#49b6ff" }, { v: 5000, c: "#a480cf" }, { v: 10000, c: "#ff499e" }] },
   sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca", alcline: "#ffffff" },
 };
@@ -1350,6 +1359,7 @@ function loadCfg() {
   return {
     wt: Object.assign({}, DEFAULT_CFG.wt, c.wt),
     rec: Object.assign({}, DEFAULT_CFG.rec, c.rec),
+    slps: Object.assign({}, DEFAULT_CFG.slps, c.slps),
     steps: { s: (c.steps && Array.isArray(c.steps.s) && c.steps.s.length === 3) ? c.steps.s : DEFAULT_CFG.steps.s.map(x => Object.assign({}, x)) },
     sleep: Object.assign({}, DEFAULT_CFG.sleep, c.sleep),
   };
@@ -1369,6 +1379,7 @@ function applyCfg() {
   NUMBYKEY.wt.fixed = [lo2, hi2 === lo2 ? lo2 + 1 : hi2];
   NUMBYKEY.wt.stops = [{ t: 0, c: w.c0, L: hexL(w.c0) }, { t: 1, c: w.c1, L: hexL(w.c1) }];
   NUMBYKEY.rec.mix = { c: cfg.rec.c, L: hexL(cfg.rec.c) };
+  NUMBYKEY.slps.mix = { c: cfg.slps.c, L: hexL(cfg.slps.c) };
   const ss = cfg.steps.s.slice().sort((a, b) => a.v - b.v);
   const top = ss[2].v > 0 ? ss[2].v : 1;
   NUMBYKEY.steps.fixed = [0, top];
@@ -1382,12 +1393,14 @@ function applyCfg() {
   rt.setProperty("--alc-line", cfg.sleep.alcline);
   rt.setProperty("--c-wt", w.c1);
   rt.setProperty("--c-rec", cfg.rec.c);
+  rt.setProperty("--c-slps", cfg.slps.c);
   rt.setProperty("--c-steps", ss[2].c);
 }
 const CFG_IDS = {
   "cfg-wt-min": ["wt", "min", "num"], "cfg-wt-max": ["wt", "max", "num"],
   "cfg-wt-c0": ["wt", "c0", "col"], "cfg-wt-c1": ["wt", "c1", "col"],
   "cfg-rec-c": ["rec", "c", "col"],
+  "cfg-slps-c": ["slps", "c", "col"],
   "cfg-sb-scale": ["sleep", "scale", "num"],
   "cfg-sb-deep": ["sleep", "deep", "col"], "cfg-sb-light": ["sleep", "light", "col"],
   "cfg-sb-rem": ["sleep", "rem", "col"], "cfg-sb-wake": ["sleep", "wake", "col"],
