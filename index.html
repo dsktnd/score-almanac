@@ -967,18 +967,14 @@ function renderSleep() {
     wrap.appendChild(p);
     return;
   }
-  let lo = -1, hi = 8;
-  rows.forEach(r => {
-    if (r.b !== null) { lo = Math.min(lo, r.b); hi = Math.max(hi, r.b + 1); }
-    if (r.w !== null) { hi = Math.max(hi, r.w); lo = Math.min(lo, r.w - 1); }
-  });
-  lo = Math.floor(lo); hi = Math.ceil(hi);
+  /* 固定ドメイン: 前夜21:00(-3)〜当日12:00。範囲外は端にクランプして描画 */
+  const lo = -3, hi = 12;
   const span = hi - lo;
-  const step = span > 18 ? 6 : span > 12 ? 3 : span > 7 ? 2 : 1;
+  const step = 3;
 
   const W = 360, ML = 30, MR = 8, MT = 14, MB = 2, RH = 13;
   const H = MT + n * RH + MB;
-  const X = h => ML + (h - lo) / span * (W - ML - MR);
+  const X = h => ML + (Math.min(hi, Math.max(lo, h)) - lo) / span * (W - ML - MR);
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
