@@ -611,6 +611,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <div class="month-title"><span id="mt-month"></span><span class="yr" id="mt-year"></span></div>
       <div class="mast-btns">
         <button class="mast-btn" id="open-charts">グラフ</button>
+        <button class="mast-btn" id="open-sleep">睡眠</button>
         <button class="mast-btn" id="open-data">データ</button>
         <button class="mast-btn" id="open-set" aria-label="設定">⚙</button>
       </div>
@@ -665,6 +666,17 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       </div>
       <p class="legend"><span class="mark yes"></span> した ／ <span class="mark no"></span> しなかった ／ 空欄 = 未記入。</p>
     </details>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-sleep" hidden>
+  <div class="modal" role="dialog" aria-labelledby="sleep-title">
+    <div class="modal-head">
+      <span id="sleep-title">睡眠 — 就寝と起床</span>
+      <button class="modal-close" data-close="mb-sleep" aria-label="閉じる">✕</button>
+    </div>
+    <div class="chart" id="sleep-list"></div>
+    <p class="io-note">前夜の就寝〜当日朝の起床を、起きた日の行に表示します。行をタップでその日の記入欄が開きます。</p>
   </div>
 </div>
 
@@ -754,6 +766,9 @@ const NUMS = [
   { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   mix: { c: "#ff499e", L: 69 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
   /* 睡眠スコア: 0=背景色 → 100=#6f2dbd(深い眠りの紫 L47) */
   { key: "slps",  label: "睡眠スコア", short: "眠ス", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-slps",  mix: { c: "#6f2dbd", L: 47 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
+  /* 就寝・起床: 時刻(HHMM)。「その朝起きた睡眠」を当日に記入。平均・折れ線は睡眠モーダルで代替するため除外 */
+  Object.assign({}, HM, { key: "bedt",  label: "就寝時刻",  short: "就", cvar: "--c-slp",   fmt: HM.cellFmt, noavg: true, nochart: true }),
+  Object.assign({}, HM, { key: "wket",  label: "起床時刻",  short: "起", cvar: "--c-slp",   fmt: HM.cellFmt, noavg: true, nochart: true }),
   Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
   Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
   Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
@@ -769,7 +784,7 @@ const SLEEP_BAR = { sleepbar: true, scale: 10, segs: [["deep", "深"], ["light",
 const NUMBYKEY = {};
 NUMS.forEach(n => NUMBYKEY[n.key] = n);
 /* overview columns: 体重・歩 | 酒・ベッド・リカ・眠ス・睡眠バー(数字内包) | サ・英 */
-const OV_COLS = [NUMS[0], NUMS[8], BOOLS[1], BOOLS[0], NUMS[1], NUMS[2], SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
+const OV_COLS = [NUMBYKEY.wt, NUMBYKEY.steps, BOOLS[1], BOOLS[0], NUMBYKEY.rec, NUMBYKEY.slps, SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
 const DOW = ["日", "月", "火", "水", "木", "金", "土"];
 
 let db = load();
@@ -841,6 +856,11 @@ function writeFormToDb() {
     const v = def.fromInput ? def.fromInput(i.value) : parseFloat(i.value);
     if (v !== null && isFinite(v)) rec[i.dataset.key] = v;
   });
+  /* 睡眠時間が空欄なら就寝→起床から自動計算（日またぎ対応） */
+  if (rec.slp === undefined && typeof rec.bedt === "number" && typeof rec.wket === "number") {
+    const dur = (rec.wket - rec.bedt + 24) % 24;
+    if (dur > 0) rec.slp = Math.round(dur * 60) / 60;
+  }
   if (Object.keys(rec).length) db[entryDate] = rec; else delete db[entryDate];
   persist();
   flashSaved();
@@ -879,6 +899,7 @@ document.querySelectorAll(".modal-close").forEach(b => b.addEventListener("click
 document.querySelectorAll(".modal-backdrop").forEach(bd => bd.addEventListener("click", e => { if (e.target === bd) bd.hidden = true; }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal-backdrop").forEach(bd => bd.hidden = true); });
 document.getElementById("open-charts").addEventListener("click", () => openModal("mb-charts"));
+document.getElementById("open-sleep").addEventListener("click", () => openModal("mb-sleep"));
 document.getElementById("open-data").addEventListener("click", () => openModal("mb-data"));
 document.getElementById("open-set").addEventListener("click", () => openModal("mb-set"));
 function openEntry(dateKey) {
@@ -908,6 +929,7 @@ function renderSummary() {
   });
   const avgs = [];
   NUMS.forEach(m => {
+    if (m.noavg) return;
     const vals = [];
     for (let d = 1; d <= n; d++) {
       const v = (db[dayKey(viewMonth, d)] || {})[m.key];
@@ -920,6 +942,141 @@ function renderSummary() {
   });
   document.getElementById("summary").innerHTML =
     parts.join(" ・ ") + (avgs.length ? "<br>" + avgs.join(" ・ ") : "");
+}
+
+/* ── sleep timeline: 就寝→起床の一覧 ────────── */
+function renderSleep() {
+  const wrap = document.getElementById("sleep-list");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  const [y, m] = viewMonth.split("-").map(Number);
+  const todayD = viewMonth === todayKey().slice(0, 7) ? Number(todayKey().slice(8)) : -1;
+  const clk = h => NUMBYKEY.slp.cellFmt(((h % 24) + 24) % 24);
+  const rows = [];
+  for (let d = 1; d <= n; d++) {
+    const rec = db[dayKey(viewMonth, d)] || {};
+    let b = typeof rec.bedt === "number" && isFinite(rec.bedt) ? rec.bedt : null;
+    const w = typeof rec.wket === "number" && isFinite(rec.wket) ? rec.wket : null;
+    if (b !== null && b >= 12) b -= 24;   /* 正午以降の就寝は前夜(負の時刻)として扱う */
+    if (b !== null || w !== null) rows.push({ d, b, w });
+  }
+  if (!rows.length) {
+    const p = document.createElement("p");
+    p.className = "empty-note";
+    p.textContent = "就寝・起床の記録がまだありません。記入欄の「就寝時刻」「起床時刻」から入力できます。";
+    wrap.appendChild(p);
+    return;
+  }
+  let lo = -1, hi = 8;
+  rows.forEach(r => {
+    if (r.b !== null) { lo = Math.min(lo, r.b); hi = Math.max(hi, r.b + 1); }
+    if (r.w !== null) { hi = Math.max(hi, r.w); lo = Math.min(lo, r.w - 1); }
+  });
+  lo = Math.floor(lo); hi = Math.ceil(hi);
+  const span = hi - lo;
+  const step = span > 18 ? 6 : span > 12 ? 3 : span > 7 ? 2 : 1;
+
+  const W = 360, ML = 30, MR = 8, MT = 14, MB = 2, RH = 13;
+  const H = MT + n * RH + MB;
+  const X = h => ML + (h - lo) / span * (W - ML - MR);
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "日別の就寝から起床までの帯グラフ。数値は月間一覧の表を参照。");
+
+  for (let h = Math.ceil(lo / step) * step; h <= hi; h += step) {
+    const x = X(h);
+    const ln = document.createElementNS(svgNS, "line");
+    ln.setAttribute("x1", x); ln.setAttribute("x2", x);
+    ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB);
+    ln.setAttribute("class", "gridline");
+    svg.appendChild(ln);
+    const tx = document.createElementNS(svgNS, "text");
+    tx.setAttribute("x", x); tx.setAttribute("y", 9);
+    tx.setAttribute("text-anchor", "middle");
+    tx.setAttribute("class", "axislabel");
+    tx.textContent = ((h % 24) + 24) % 24 + "時";
+    svg.appendChild(tx);
+  }
+  const zero = X(0);   /* 0時の基準線を少し濃く */
+  if (0 >= lo && 0 <= hi) {
+    const ln = document.createElementNS(svgNS, "line");
+    ln.setAttribute("x1", zero); ln.setAttribute("x2", zero);
+    ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB);
+    ln.setAttribute("class", "gridline");
+    ln.setAttribute("stroke-dasharray", "2 2");
+    ln.setAttribute("style", "stroke: var(--color-muted)");
+    svg.appendChild(ln);
+  }
+
+  const byDay = {};
+  rows.forEach(r => byDay[r.d] = r);
+  for (let d = 1; d <= n; d++) {
+    const yC = MT + (d - 0.5) * RH;
+    const dow = new Date(y, m - 1, d).getDay();
+    const dt = document.createElementNS(svgNS, "text");
+    dt.setAttribute("x", ML - 4); dt.setAttribute("y", yC + 3);
+    dt.setAttribute("text-anchor", "end");
+    dt.setAttribute("class", "axislabel");
+    if (dow === 0 || dow === 6 || d === todayD) dt.setAttribute("style", "fill: var(--color-accent)");
+    dt.textContent = d + DOW[dow];
+    svg.appendChild(dt);
+    const r = byDay[d];
+    if (!r) continue;
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("style", "cursor: pointer");
+    g.dataset.date = dayKey(viewMonth, d);
+    if (r.b !== null && r.w !== null && r.w > r.b) {
+      const rc = document.createElementNS(svgNS, "rect");
+      rc.setAttribute("x", X(r.b)); rc.setAttribute("y", yC - (RH - 4) / 2);
+      rc.setAttribute("width", X(r.w) - X(r.b)); rc.setAttribute("height", RH - 4);
+      rc.setAttribute("rx", 2.5);
+      rc.setAttribute("fill", cfg.sleep.deep);
+      g.appendChild(rc);
+      const t1 = document.createElementNS(svgNS, "text");
+      t1.setAttribute("x", X(r.b) - 3); t1.setAttribute("y", yC + 3);
+      t1.setAttribute("text-anchor", "end");
+      t1.setAttribute("class", "axislabel");
+      t1.textContent = clk(r.b);
+      g.appendChild(t1);
+      const t2 = document.createElementNS(svgNS, "text");
+      t2.setAttribute("x", X(r.w) + 3); t2.setAttribute("y", yC + 3);
+      t2.setAttribute("class", "axislabel");
+      t2.textContent = clk(r.w);
+      g.appendChild(t2);
+      if (X(r.w) - X(r.b) > 52) {
+        const t3 = document.createElementNS(svgNS, "text");
+        t3.setAttribute("x", (X(r.b) + X(r.w)) / 2); t3.setAttribute("y", yC + 3);
+        t3.setAttribute("text-anchor", "middle");
+        t3.setAttribute("class", "axislabel");
+        t3.setAttribute("style", "fill: #fff; opacity: 0.92");
+        t3.textContent = NUMBYKEY.slp.cellFmt(r.w - r.b);
+        g.appendChild(t3);
+      }
+    } else {
+      /* 片方だけ記入 → 点で示す */
+      [["b", r.b], ["w", r.w]].forEach(([, v]) => {
+        if (v === null) return;
+        const c = document.createElementNS(svgNS, "circle");
+        c.setAttribute("cx", X(v)); c.setAttribute("cy", yC);
+        c.setAttribute("r", 2.5);
+        c.setAttribute("fill", cfg.sleep.deep);
+        g.appendChild(c);
+        const tl = document.createElementNS(svgNS, "text");
+        tl.setAttribute("x", X(v) + 4); tl.setAttribute("y", yC + 3);
+        tl.setAttribute("class", "axislabel");
+        tl.textContent = clk(v);
+        g.appendChild(tl);
+      });
+    }
+    svg.appendChild(g);
+  }
+  svg.addEventListener("click", ev => {
+    const g = ev.target.closest("[data-date]");
+    if (g) { closeModal("mb-sleep"); openEntry(g.dataset.date); }
+  });
+  wrap.appendChild(svg);
 }
 
 /* ── month table ──────────────────────────── */
@@ -1177,6 +1334,7 @@ function renderCharts() {
   wrap.innerHTML = "";
   const n = daysInMonth(viewMonth);
   NUMS.forEach(mdef => {
+    if (mdef.nochart) return;
     const pts = [];
     for (let d = 1; d <= n; d++) {
       const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
@@ -1456,6 +1614,7 @@ function renderMonth() {
   document.getElementById("mt-year").textContent = String(y);
   renderOverview();
   renderSummary();
+  renderSleep();
   renderTable();
   renderCharts();
 }
