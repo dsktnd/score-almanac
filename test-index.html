@@ -507,7 +507,7 @@ table.month tr:active td { background: var(--color-paper-2); }
 .chart .pt { fill: var(--mc, var(--color-chart)); stroke: var(--color-paper); stroke-width: 2; }
 .chart .bar { fill: var(--mc, var(--color-chart)); }
 .chart .avg-line { stroke: var(--color-ink); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.65; }
-.chart .avg-label { fill: var(--color-ink); font-family: var(--font-label); font-size: 9px; opacity: 0.85; }
+.chart .avg-label { fill: var(--color-ink); font-family: var(--font-label); font-size: 9px; opacity: 0.85; paint-order: stroke; stroke: var(--color-paper); stroke-width: 3px; stroke-linejoin: round; }
 .chart .hit { fill: transparent; }
 .chart .empty-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); padding: var(--space-md) 0; }
 #tooltip {
@@ -1034,7 +1034,7 @@ function renderSummary() {
     }
     if (!vals.length) return;
     const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
-    tile(m.label + "・月平均", m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100), m.unit || "", m.cvar);
+    tile(m.label + "・平均", m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100), m.unit || "", m.cvar);
   });
 }
 
