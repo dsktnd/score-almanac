@@ -408,16 +408,37 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
 .numeric input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .numeric .unit { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
 
-/* ── summary strip ────────────────────────── */
-.summary {
-  font-family: var(--font-label);
-  font-size: var(--text-sm);
-  line-height: 1.9;
-  color: var(--color-neutral);
-  border-block: var(--rule-hair) solid var(--color-rule);
-  padding-block: var(--space-sm);
+/* ── summary dashboard (stat tiles) ───────── */
+.dash {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr));
+  gap: 3px;
 }
-.summary b { font-weight: 500; color: var(--color-ink); }
+.dash .tile {
+  background: var(--color-paper-2);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--tc, var(--color-rule-2));
+  padding: var(--space-2xs) var(--space-xs);
+  min-width: 0;
+}
+.dash .t-label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash .t-val {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: var(--lh-snug);
+  white-space: nowrap;
+}
+.dash .t-val .t-unit { font-size: var(--text-xs); font-weight: 400; color: var(--color-muted); margin-left: 1px; }
 
 /* ── month table ──────────────────────────── */
 .gridwrap { overflow-x: auto; }
@@ -484,6 +505,9 @@ table.month tr:active td { background: var(--color-paper-2); }
 .chart .line { stroke: var(--mc, var(--color-chart)); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
 .chart .area { fill: var(--color-chart-soft); }
 .chart .pt { fill: var(--mc, var(--color-chart)); stroke: var(--color-paper); stroke-width: 2; }
+.chart .bar { fill: var(--mc, var(--color-chart)); }
+.chart .avg-line { stroke: var(--color-ink); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.65; }
+.chart .avg-label { fill: var(--color-ink); font-family: var(--font-label); font-size: 9px; opacity: 0.85; paint-order: stroke; stroke: var(--color-paper); stroke-width: 3px; stroke-linejoin: round; }
 .chart .hit { fill: transparent; }
 .chart .empty-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); padding: var(--space-md) 0; }
 #tooltip {
@@ -566,7 +590,7 @@ details.io summary {
   font-family: var(--font-label);
   cursor: pointer;
 }
-.modal .summary { margin-bottom: var(--space-md); }
+.modal .dash { margin-bottom: var(--space-md); }
 .set-group { margin-bottom: var(--space-md); }
 .set-group h3 {
   font-family: var(--font-label);
@@ -663,7 +687,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <span id="charts-title">集計と推移</span>
       <button class="modal-close" data-close="mb-charts" aria-label="閉じる">✕</button>
     </div>
-    <p class="summary" id="summary"></p>
+    <div class="dash" id="summary"></div>
     <div id="charts"></div>
     <details class="io">
       <summary>数値表（日別の全記録）</summary>
@@ -942,16 +966,36 @@ function stepMonth(delta) {
 document.getElementById("prev-month").addEventListener("click", () => stepMonth(-1));
 document.getElementById("next-month").addEventListener("click", () => stepMonth(1));
 
-/* ── summary ──────────────────────────────── */
+/* ── summary: stat-tile dashboard ─────────── */
 function renderSummary() {
   const n = daysInMonth(viewMonth);
-  const parts = [];
+  const wrap = document.getElementById("summary");
+  wrap.innerHTML = "";
+  const tile = (label, val, unit, cvar) => {
+    const t = document.createElement("div");
+    t.className = "tile";
+    if (cvar) t.style.setProperty("--tc", "var(" + cvar + ")");
+    const l = document.createElement("span");
+    l.className = "t-label";
+    l.textContent = label;
+    const v = document.createElement("span");
+    v.className = "t-val";
+    v.textContent = val;
+    if (unit) {
+      const u = document.createElement("span");
+      u.className = "t-unit";
+      u.textContent = unit;
+      v.appendChild(u);
+    }
+    t.appendChild(l);
+    t.appendChild(v);
+    wrap.appendChild(t);
+  };
   BOOLS.forEach(b => {
     let c = 0;
     for (let d = 1; d <= n; d++) if ((db[dayKey(viewMonth, d)] || {})[b.key] === true) c++;
-    parts.push(b.label + " <b>" + c + "日</b>");
+    tile(b.label, String(c), "日/" + n, b.cvar);
   });
-  const avgs = [];
   NUMS.forEach(m => {
     if (m.noavg) return;
     const vals = [];
@@ -959,13 +1003,10 @@ function renderSummary() {
       const v = (db[dayKey(viewMonth, d)] || {})[m.key];
       if (typeof v === "number" && isFinite(v)) vals.push(v);
     }
-    if (vals.length) {
-      const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
-      avgs.push(m.label + " 平均 <b>" + m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100) + (m.unit || "") + "</b>");
-    }
+    if (!vals.length) return;
+    const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
+    tile(m.label + "・平均", m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100), m.unit || "", m.cvar);
   });
-  document.getElementById("summary").innerHTML =
-    parts.join(" ・ ") + (avgs.length ? "<br>" + avgs.join(" ・ ") : "");
 }
 
 /* ── sleep timeline: 就寝→起床の一覧 ────────── */
@@ -1404,8 +1445,11 @@ function renderCharts() {
 
     const W = 360, H = 96, ML = 34, MR = 8, MT = 8, MB = 16;
     const dom = domainFor(mdef, vals);
+    if (!mdef.interp) dom[0] = 0; /* 棒グラフはゼロ基線（長さ＝量） */
     const lo = dom[0], hi = dom[1];
     const X = d => ML + (d - 1) / (n - 1) * (W - ML - MR);
+    const slot = (W - ML - MR) / n;
+    const dayX = d => mdef.interp ? X(d) : ML + (d - 0.5) * slot;
     const Y = v => MT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - MT - MB);
 
     const svgNS = "http://www.w3.org/2000/svg";
@@ -1432,45 +1476,72 @@ function renderCharts() {
     });
     [1, Math.round(n / 2), n].forEach(dd => {
       const tx = document.createElementNS(svgNS, "text");
-      tx.setAttribute("x", X(dd)); tx.setAttribute("y", H - 3);
+      tx.setAttribute("x", dayX(dd)); tx.setAttribute("y", H - 3);
       tx.setAttribute("text-anchor", dd === 1 ? "start" : dd === n ? "end" : "middle");
       tx.setAttribute("class", "axislabel");
       tx.textContent = dd + "日";
       svg.appendChild(tx);
     });
 
-    // consecutive runs → separate polylines (gaps stay gaps)
-    const runs = [];
-    let run = [];
-    pts.forEach(p => {
-      if (run.length && p.d !== run[run.length - 1].d + 1) { runs.push(run); run = []; }
-      run.push(p);
-    });
-    if (run.length) runs.push(run);
-    runs.forEach(r => {
-      if (r.length > 1) {
+    const tipFor = (p, el) => ev => {
+      ev.stopPropagation();
+      const rect = el.getBoundingClientRect();
+      showTooltip(viewMonth.split("-")[1].replace(/^0/, "") + "/" + p.d + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
+        rect.left + rect.width / 2, rect.top);
+    };
+    if (mdef.interp) {
+      /* 体重: 空白日は前後の記録を直線で結ぶ（1本の折れ線） */
+      if (pts.length > 1) {
         const pl = document.createElementNS(svgNS, "polyline");
-        pl.setAttribute("points", r.map(p => X(p.d).toFixed(1) + "," + Y(p.v).toFixed(1)).join(" "));
+        pl.setAttribute("points", pts.map(p => X(p.d).toFixed(1) + "," + Y(p.v).toFixed(1)).join(" "));
         pl.setAttribute("class", "line");
         svg.appendChild(pl);
       }
-    });
-    pts.forEach(p => {
-      const c = document.createElementNS(svgNS, "circle");
-      c.setAttribute("cx", X(p.d)); c.setAttribute("cy", Y(p.v)); c.setAttribute("r", 3);
-      c.setAttribute("class", "pt");
-      svg.appendChild(c);
-      const hit = document.createElementNS(svgNS, "circle");
-      hit.setAttribute("cx", X(p.d)); hit.setAttribute("cy", Y(p.v)); hit.setAttribute("r", 12);
-      hit.setAttribute("class", "hit");
-      hit.addEventListener("click", ev => {
-        ev.stopPropagation();
-        const rect = hit.getBoundingClientRect();
-        showTooltip(viewMonth.split("-")[1].replace(/^0/, "") + "/" + p.d + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
-          rect.left + rect.width / 2, rect.top);
+      pts.forEach(p => {
+        const c = document.createElementNS(svgNS, "circle");
+        c.setAttribute("cx", X(p.d)); c.setAttribute("cy", Y(p.v)); c.setAttribute("r", 3);
+        c.setAttribute("class", "pt");
+        svg.appendChild(c);
+        const hit = document.createElementNS(svgNS, "circle");
+        hit.setAttribute("cx", X(p.d)); hit.setAttribute("cy", Y(p.v)); hit.setAttribute("r", 12);
+        hit.setAttribute("class", "hit");
+        hit.addEventListener("click", tipFor(p, hit));
+        svg.appendChild(hit);
       });
-      svg.appendChild(hit);
-    });
+    } else {
+      /* 棒グラフ＋月平均の水平線 */
+      const bw = Math.max(2, slot - 2);
+      const base = H - MB;
+      pts.forEach(p => {
+        const y = Y(p.v);
+        const bar = document.createElementNS(svgNS, "rect");
+        bar.setAttribute("x", (dayX(p.d) - bw / 2).toFixed(1)); bar.setAttribute("y", y.toFixed(1));
+        bar.setAttribute("width", bw.toFixed(1)); bar.setAttribute("height", Math.max(0, base - y).toFixed(1));
+        bar.setAttribute("rx", 1.5);
+        bar.setAttribute("class", "bar");
+        svg.appendChild(bar);
+        const hit = document.createElementNS(svgNS, "rect");
+        hit.setAttribute("x", (ML + (p.d - 1) * slot).toFixed(1)); hit.setAttribute("y", MT);
+        hit.setAttribute("width", slot.toFixed(1)); hit.setAttribute("height", H - MT - MB);
+        hit.setAttribute("class", "hit");
+        hit.addEventListener("click", tipFor(p, hit));
+        svg.appendChild(hit);
+      });
+      const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
+      const ay = Y(avg);
+      const al = document.createElementNS(svgNS, "line");
+      al.setAttribute("x1", ML); al.setAttribute("x2", W - MR);
+      al.setAttribute("y1", ay.toFixed(1)); al.setAttribute("y2", ay.toFixed(1));
+      al.setAttribute("class", "avg-line");
+      svg.appendChild(al);
+      const at = document.createElementNS(svgNS, "text");
+      at.setAttribute("x", W - MR);
+      at.setAttribute("y", (ay < MT + 12 ? ay + 10 : ay - 3).toFixed(1));
+      at.setAttribute("text-anchor", "end");
+      at.setAttribute("class", "avg-label");
+      at.textContent = "平均 " + mdef.fmt(mdef.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100);
+      svg.appendChild(at);
+    }
     div.appendChild(svg);
     wrap.appendChild(div);
   });
