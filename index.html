@@ -904,10 +904,18 @@ function writeFormToDb() {
     const v = def.fromInput ? def.fromInput(i.value) : parseFloat(i.value);
     if (v !== null && isFinite(v)) rec[i.dataset.key] = v;
   });
-  /* 睡眠時間が空欄なら就寝→起床から自動計算（日またぎ対応） */
-  if (rec.slp === undefined && typeof rec.bedt === "number" && typeof rec.wket === "number") {
+  /* 睡眠時間の自動計算（日またぎ対応）:
+     空欄なら就寝→起床から計算して slpa フラグを付ける。
+     slpa 付き（＝自動値のまま手を入れていない）なら就寝・起床の変更に追従して再計算する。
+     手入力された睡眠時間には触れない */
+  const prevRec = db[entryDate] || {};
+  const wasAuto = prevRec.slpa === 1 && typeof prevRec.slp === "number" &&
+    typeof rec.slp === "number" && Math.round(rec.slp * 60) === Math.round(prevRec.slp * 60);
+  if (typeof rec.bedt === "number" && typeof rec.wket === "number" && (rec.slp === undefined || wasAuto)) {
     const dur = (rec.wket - rec.bedt + 24) % 24;
-    if (dur > 0) rec.slp = Math.round(dur * 60) / 60;
+    if (dur > 0) { rec.slp = Math.round(dur * 60) / 60; rec.slpa = 1; }
+  } else if (wasAuto) {
+    rec.slpa = 1;
   }
   if (Object.keys(rec).length) db[entryDate] = rec; else delete db[entryDate];
   persist();
