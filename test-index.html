@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#e4e4e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Score Almanac">
+<title>Score Almanac — 月間スコア台帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 */
+/* Hallmark · component: app (score tracker) · genre: editorial · theme: studied-DNA (source: user image — riso-style dataviz poster, magenta×indigo two-ink on warm paper)
+ * scope: app-UI — macrostructure/nav/footer archetypes skipped by design
+ * tone: utilitarian-editorial · paper oklch(96% .008 85) · accent-ink: indigo oklch(44% .15 275)
+ * categorical: wt=magenta355 rec=indigo275 slp=violet315 steps=blue245 (lightness-spread for CVD)
+ * charts: month heat-strips (sequential single-hue, day×item) + small multiples ×4 (single-axis rule)
+ * palette validated (light/dark PASS) · sequential ramp = color-mix(in oklch) paper→chart, monotonic
+ * states: default · focus-visible · active · disabled — silent-success save
+ */
+:root {
+  --color-paper:    oklch(92%  0.003 270);
+  --color-paper-2:  oklch(89%  0.004 270);
+  --color-paper-3:  oklch(84%  0.005 270);
+  --color-rule:     oklch(73%  0.006 270);
+  --color-cellrule: oklch(81%  0.005 270);
+  --color-rule-2:   oklch(40%  0.008 270);
+  --color-muted:    oklch(46%  0.008 270);
+  --color-neutral:  oklch(30%  0.008 270);
+  --color-ink:      oklch(17%  0.006 270);
+  --color-accent:   oklch(44%  0.190 275);
+  --color-focus:    oklch(44%  0.190 275);
+  --color-chart:    oklch(58%  0.240 355);
+  --color-chart-soft: oklch(58% 0.240 355 / 0.14);
+  --c-wt:    oklch(55% 0.180 26);
+  --c-rec:   oklch(58% 0.210 356);
+  --c-slps:  oklch(47% 0.208 299);
+  --c-slp:   oklch(58% 0.130 302);
+  --c-wake:  oklch(54% 0.163 253);
+  --c-rem:   oklch(48% 0.110 251);
+  --c-light: oklch(62% 0.165 312);
+  --c-deep:  oklch(47% 0.208 299);
+  --c-steps: oklch(58% 0.210 356);
+  --c-bed:   oklch(57% 0.120 275);
+  --c-alc:   oklch(70% 0.090 275);
+  --color-check: oklch(48% 0.006 270);
+  --color-error: oklch(52% 0.190 25);
+  /* sleep stacked-bar segments — user-specified flat colors, both modes */
+  --sb-deep:  #6f2dbd;
+  --sb-light: #a663cc;
+  --sb-rem:   #b8d0eb;
+  --sb-wake:  #066FCA;
+  --sb-text-on-dark:  oklch(97% 0 0);
+  --sb-text-on-light: oklch(22% 0.02 270);
+  --alc-line: #ffffff;
+  /* sleep page bar — 3-stop duration ramp (short→avg→long), user-editable, both modes */
+  --slp-r0: #066fca;
+  --slp-r1: #6f2dbd;
+  --slp-r2: #ff6d64;
+
+  --font-display: "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-body:    "Hanken Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-serif:   "Newsreader", ui-serif, Georgia, serif;
+  --font-label:   "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs:   0.6875rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md:   1.0625rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.5rem;
+  --text-display: clamp(1.75rem, 7vw, 2.5rem);
+
+  --tracking-label: 0.06em;
+  --lh-snug: 1.22;
+  --lh-normal: 1.5;
+
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+
+  --rule-hair: 1px;
+  --rule-fine: 3px;
+  --radius: 2px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper:    oklch(17%  0.004 270);
+    --color-paper-2:  oklch(20%  0.004 270);
+    --color-paper-3:  oklch(26%  0.005 270);
+    --color-rule:     oklch(36%  0.006 270);
+    --color-cellrule: oklch(28%  0.005 270);
+    --color-rule-2:   oklch(72%  0.006 270);
+    --color-muted:    oklch(68%  0.006 270);
+    --color-neutral:  oklch(80%  0.005 270);
+    --color-ink:      oklch(93%  0.004 270);
+    --color-accent:   oklch(64%  0.160 275);
+    --color-focus:    oklch(64%  0.160 275);
+    --color-chart:    oklch(66%  0.230 355);
+    --color-chart-soft: oklch(66% 0.230 355 / 0.18);
+    --c-wt:    oklch(71% 0.180 26);
+    --c-rec:   oklch(69% 0.228 356);
+    --c-slps:  oklch(56% 0.190 299);
+    --c-slp:   oklch(73% 0.100 302);
+    --c-wake:  oklch(64% 0.140 253);
+    --c-rem:   oklch(85% 0.046 251);
+    --c-light: oklch(62% 0.165 312);
+    --c-deep:  oklch(56% 0.190 299);
+    --c-steps: oklch(69% 0.228 356);
+    --c-bed:   oklch(62% 0.120 275);
+    --c-alc:   oklch(74% 0.090 275);
+    --color-check: oklch(68% 0.006 270);
+    --color-error: oklch(68% 0.170 25);
+  }
+  body { font-weight: 350; }
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { overflow: clip; height: 100%; }
+body {
+  overflow: clip;
+  height: 100dvh;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  padding: max(var(--space-xs), env(safe-area-inset-top)) var(--space-md) max(var(--space-xs), env(safe-area-inset-bottom));
+  -webkit-text-size-adjust: 100%;
+}
+main { max-width: 40rem; margin-inline: auto; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+
+/* ── masthead ─────────────────────────────── */
+header.masthead {
+  border-bottom: var(--rule-fine) solid var(--color-ink);
+  padding-block: var(--space-2xs) var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+.wordmark {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-left: auto;
+  margin-right: var(--space-xs);
+}
+.month-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.month-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 5vw, 1.625rem);
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  line-height: 1;
+}
+.month-title .yr {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 0.45em;
+  color: var(--color-muted);
+  margin-left: var(--space-2xs);
+}
+.mast-btns { margin-left: auto; display: flex; gap: var(--space-2xs); }
+.mast-btn {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  height: 2rem;
+  padding-inline: var(--space-xs);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.mast-btn:active { transform: translateY(1px); }
+.month-nav { display: flex; gap: var(--space-2xs); }
+.month-nav button {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  line-height: 1;
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  width: 2rem; height: 2rem;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.month-nav button:active { transform: translateY(1px); }
+.month-nav button:disabled { color: var(--color-rule); border-color: var(--color-paper-3); }
+
+/* ── section heads ────────────────────────── */
+section { margin-bottom: var(--space-2xl); }
+h2 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-md);
+}
+
+/* ── month overview: vertical calendar heatmap ── */
+section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+.ov-grid {
+  --ov-cell: clamp(0.875rem, calc((100dvh - 8rem) / 31 - 2px), 1.75rem);
+  display: grid;
+  grid-template-columns: 2.2rem repeat(6, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
+  gap: 2px;
+  justify-content: start;
+  cursor: pointer;
+}
+.ov-h {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+  text-align: center;
+  white-space: nowrap; overflow: hidden;
+  padding-bottom: 2px;
+}
+.ov-date {
+  font-family: var(--font-label);
+  font-size: 0.5625rem;
+  color: var(--color-muted);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 3px;
+  white-space: nowrap;
+}
+.ov-date.we { color: var(--color-accent); }
+.ov-date.today { color: var(--color-accent); font-weight: 500; }
+.ov-cell {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-cellrule);
+  border-radius: calc(var(--ov-cell) / 5); min-width: 0; height: var(--ov-cell);
+}
+.ov-cell.fill { box-shadow: none; }
+.ov-cell.today { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.ov-cell.num {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  overflow: hidden;
+}
+.ov-cell.num.hi { color: var(--color-paper); }
+.ov-h.bar { text-align: left; padding-left: 2px; }
+.ov-t {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 3px;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.ov-bar { display: flex; gap: 1px; padding: 1px; }
+.ov-bar .sb {
+  height: calc(100% - 0px); border-radius: calc(var(--ov-cell) / 7); min-width: 1px;
+  display: flex; align-items: center;
+  overflow: visible; white-space: nowrap;
+  padding-left: 2px;
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ov-bar .sb .lb { position: relative; z-index: 1; }
+.ov-bar .sb { color: var(--sb-text-on-light); }
+.ov-bar .sb.lt { color: var(--sb-text-on-dark); }
+.ov-bar .sb.lt .lb { text-shadow: 0 1px 2px oklch(30% 0.05 300 / 0.6); }
+.ov-bar .sb.deep  { background: var(--sb-deep); }
+.ov-bar .sb.light { background: var(--sb-light); }
+.ov-bar .sb.rem   { background: var(--sb-rem); }
+.ov-bar .sb.wake  { background: var(--sb-wake); }
+.ov-bar { position: relative; }
+.ov-bar.prev-alc::before {
+  content: "";
+  position: absolute;
+  left: -2px; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--alc-line);
+  z-index: 1;
+}
+.ov-bar .tot {
+  position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+  font-family: var(--font-label);
+  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
+  line-height: 1;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mark.sq { border-radius: 2px; }
+.mark.sq.deep  { background: var(--sb-deep); }
+.mark.sq.light { background: var(--sb-light); }
+.mark.sq.rem   { background: var(--sb-rem); }
+.mark.sq.wake  { background: var(--sb-wake); }
+.ov-sp { background: none; }
+.ov-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs); margin-top: var(--space-xs); font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+.ov-legend .ramp { width: 4.5rem; height: 0.5rem; border-radius: 1px; background: linear-gradient(to right, var(--color-paper-2), var(--color-neutral)); }
+.ov-legend .ramp.slp { background: linear-gradient(to right in oklab, var(--slp-r0), var(--slp-r1), var(--slp-r2)); }
+.ov-legend .mark { margin-left: var(--space-sm); }
+
+/* ── entry panel ──────────────────────────── */
+.entry-date-row {
+  display: flex; align-items: center; gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+.entry-date-row input[type="date"] {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-xs) var(--space-sm);
+  min-height: 2.5rem;
+}
+.entry-date-row .daystep {
+  font-family: var(--font-label);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  width: 2.5rem; height: 2.5rem;
+  cursor: pointer;
+}
+.entry-date-row .daystep:active { transform: translateY(1px); }
+#save-note {
+  margin-left: auto;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+#save-note.shown { opacity: 1; }
+
+.toggles { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-xs); }
+.toggle {
+  display: flex; align-items: center; gap: var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper-2);
+  padding: var(--space-sm);
+  min-height: 3rem;
+  cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.toggle:active { transform: translateY(1px); }
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle .dot {
+  flex: none;
+  width: 1.125rem; height: 1.125rem;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: 50%;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.toggle input:checked + .dot { background: var(--color-check); border-color: var(--color-check); }
+.toggle input:focus-visible ~ .lbl { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.toggle .lbl { font-size: var(--text-sm); }
+
+.numerics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-xs); margin-top: var(--space-xs); }
+.numeric { border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); padding: var(--space-xs) var(--space-sm); }
+.numeric label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+}
+.numeric .inrow { display: flex; align-items: baseline; gap: var(--space-2xs); }
+.numeric input {
+  width: 100%;
+  font-family: var(--font-label);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+  background: none; border: none;
+  padding: 0;
+  min-height: 2rem;
+}
+.numeric input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.numeric .unit { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* ── summary dashboard (stat tiles) ───────── */
+.dash {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr));
+  gap: 3px;
+}
+.dash .tile {
+  background: var(--color-paper-2);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--tc, var(--color-rule-2));
+  padding: var(--space-2xs) var(--space-xs);
+  min-width: 0;
+}
+.dash .t-label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash .t-val {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: var(--lh-snug);
+  white-space: nowrap;
+}
+.dash .t-val .t-unit { font-size: var(--text-xs); font-weight: 400; color: var(--color-muted); margin-left: 1px; }
+
+/* ── month table ──────────────────────────── */
+.gridwrap { overflow-x: auto; }
+table.month {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+}
+table.month th, table.month td {
+  border-bottom: var(--rule-hair) solid var(--color-paper-3);
+  padding: var(--space-2xs) 0.125rem;
+  text-align: center;
+  font-weight: 400;
+  white-space: nowrap;
+}
+table.month thead th {
+  color: var(--color-muted);
+  letter-spacing: var(--tracking-label);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  position: sticky; top: 0;
+  background: var(--color-paper);
+}
+table.month td.date, table.month th.date { text-align: left; padding-left: var(--space-2xs); }
+table.month td.date { color: var(--color-muted); }
+table.month td.date .dow { font-size: 0.9em; margin-left: 0.2em; }
+table.month tr.weekend td.date { color: var(--color-accent); }
+table.month tr.today td.date { color: var(--color-ink); font-weight: 500; }
+table.month tr.today { box-shadow: inset var(--rule-fine) 0 0 var(--color-accent); }
+table.month td.num { font-variant-numeric: tabular-nums; color: var(--color-neutral); }
+table.month tr { cursor: pointer; }
+table.month tr:active td { background: var(--color-paper-2); }
+.mark { display: inline-block; width: 0.625rem; height: 0.625rem; border-radius: 50%; vertical-align: -1px; }
+.mark.yes { background: var(--color-check); }
+.mark.no  {
+  border: var(--rule-hair) solid var(--color-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mark.no::after { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--color-muted); }
+.mark.blank { border: var(--rule-hair) solid var(--color-rule); }
+.mark.alcline { width: 2px; height: 0.75rem; border-radius: 0; background: var(--alc-line); box-shadow: 0 0 0 1px var(--color-rule); }
+.legend {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-xs);
+}
+
+/* ── charts ───────────────────────────────── */
+.chart { margin-bottom: var(--space-lg); }
+.chart h3 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-neutral);
+  margin-bottom: var(--space-2xs);
+}
+.chart h3 .stat { color: var(--color-muted); font-weight: 400; float: right; }
+.chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chart .gridline { stroke: var(--color-paper-3); stroke-width: 1; }
+.chart .axislabel { fill: var(--color-muted); font-family: var(--font-label); font-size: 9px; }
+.chart .avgl { fill: #ff499e; }
+.chart .line { stroke: var(--mc, var(--color-chart)); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--color-chart-soft); }
+.chart .pt { fill: var(--mc, var(--color-chart)); stroke: var(--color-paper); stroke-width: 2; }
+.chart .bar { fill: var(--mc, var(--color-chart)); }
+.chart .avg-line { stroke: var(--color-ink); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.65; }
+.chart .avg-label { fill: var(--color-ink); font-family: var(--font-label); font-size: 9px; opacity: 0.85; }
+.chart .hit { fill: transparent; }
+.chart .empty-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); padding: var(--space-md) 0; }
+#tooltip {
+  position: fixed;
+  z-index: 600;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+#tooltip.shown { opacity: 1; }
+
+/* ── data io ──────────────────────────────── */
+details.io summary {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding-block: var(--space-xs);
+}
+.io-row { display: flex; flex-wrap: wrap; gap: var(--space-xs); padding-block: var(--space-sm); }
+.io-row button, .io-row label.filebtn {
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  padding: var(--space-xs) var(--space-md);
+  min-height: 2.5rem;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+}
+.io-row button:active, .io-row label.filebtn:active { transform: translateY(1px); }
+.io-row input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.io-note { font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
+#io-status { min-height: 1.2em; color: var(--color-accent); font-weight: 500; }
+#io-status.err { color: var(--color-error); }
+
+/* ── modals ───────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  z-index: 400;
+  background: oklch(15% 0.01 270 / 0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  width: 100%; max-width: 40rem;
+  background: var(--color-paper);
+  border-top: var(--rule-fine) solid var(--color-ink);
+  border-radius: 6px 6px 0 0;
+  padding: var(--space-md) var(--space-md) calc(var(--space-lg) + env(safe-area-inset-bottom));
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-md);
+}
+.modal-close {
+  width: 2rem; height: 2rem;
+  background: none;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  color: var(--color-ink);
+  font-family: var(--font-label);
+  cursor: pointer;
+}
+.modal .dash { margin-bottom: var(--space-md); }
+.set-group { margin-bottom: var(--space-md); }
+.set-group h3 {
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-muted);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding-bottom: var(--space-2xs);
+  margin-bottom: var(--space-xs);
+}
+.set-row { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-2xs); }
+.set-row label { flex: 1; font-size: var(--text-sm); }
+.set-row input[type="number"] {
+  width: 5.5rem;
+  font-family: var(--font-label);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  padding: var(--space-2xs) var(--space-xs);
+  min-height: 2.25rem;
+}
+.set-row input[type="color"] {
+  width: 2.75rem; height: 2.25rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius);
+  background: none;
+  padding: 2px;
+}
+
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; }
+}
+@media (min-width: 480px) {
+  .toggles, .numerics { grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="month-row">
+      <div class="month-title"><span id="mt-month"></span><span class="yr" id="mt-year"></span></div>
+      <div class="mast-btns">
+        <button class="mast-btn" id="open-charts">グラフ</button>
+        <button class="mast-btn" id="open-sleep">睡眠</button>
+        <button class="mast-btn" id="open-data">データ</button>
+        <button class="mast-btn" id="open-set" aria-label="設定">⚙</button>
+      </div>
+      <nav class="month-nav" aria-label="月の移動">
+        <button id="prev-month" aria-label="前の月">←</button>
+        <button id="next-month" aria-label="次の月">→</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="ov-section">
+    <div id="overview"></div>
+    <div class="ov-legend">
+      <span class="mark sq deep"></span><span>深</span>
+      <span class="mark sq light"></span><span>浅</span>
+      <span class="mark sq rem"></span><span>レム</span>
+      <span class="mark sq wake"></span><span>覚醒</span>
+      <span class="mark alcline"></span><span>前日飲酒</span>
+    </div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="mb-entry" hidden>
+  <div class="modal" role="dialog" aria-labelledby="entry-title">
+    <div class="modal-head">
+      <span id="entry-title">記入</span>
+      <button class="modal-close" data-close="mb-entry" aria-label="閉じる">✕</button>
+    </div>
+    <div class="entry-date-row">
+      <button class="daystep" id="prev-day" aria-label="前日">‹</button>
+      <input type="date" id="entry-date" aria-label="記入する日付">
+      <button class="daystep" id="next-day" aria-label="翌日">›</button>
+      <span id="save-note" role="status">保存済み</span>
+    </div>
+    <div class="toggles" id="toggles"></div>
+    <div class="numerics" id="numerics"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-charts" hidden>
+  <div class="modal" role="dialog" aria-labelledby="charts-title">
+    <div class="modal-head">
+      <span id="charts-title">集計と推移</span>
+      <button class="modal-close" data-close="mb-charts" aria-label="閉じる">✕</button>
+    </div>
+    <div class="dash" id="summary"></div>
+    <div id="charts"></div>
+    <details class="io">
+      <summary>数値表（日別の全記録）</summary>
+      <div class="gridwrap">
+        <table class="month" id="month-table"></table>
+      </div>
+      <p class="legend"><span class="mark yes"></span> した ／ <span class="mark no"></span> しなかった ／ 空欄 = 未記入。</p>
+    </details>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-sleep" hidden>
+  <div class="modal" role="dialog" aria-labelledby="sleep-title">
+    <div class="modal-head">
+      <span id="sleep-title">睡眠 — 就寝と起床</span>
+      <button class="modal-close" data-close="mb-sleep" aria-label="閉じる">✕</button>
+    </div>
+    <div class="chart" id="sleep-list"></div>
+    <div class="ov-legend"><span>睡眠時間 短</span><span class="ramp slp"></span><span>長</span></div>
+    <p class="io-note">前夜の就寝〜当日朝の起床を、起きた日の行に表示します。行をタップでその日の記入欄が開きます。</p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-data" hidden>
+  <div class="modal" role="dialog" aria-labelledby="data-title">
+    <div class="modal-head">
+      <span id="data-title">Score Almanac — データ</span>
+      <button class="modal-close" data-close="mb-data" aria-label="閉じる">✕</button>
+    </div>
+    <div class="io-row">
+      <button id="export-json">JSONを書き出す</button>
+      <button id="copy-json">コピー</button>
+      <label class="filebtn">JSONを読み込む<input type="file" id="import-json" accept=".json,application/json,text/plain"></label>
+      <button id="paste-json">貼り付けで読み込む</button>
+    </div>
+    <p class="io-note" id="io-status" role="status" aria-live="polite"></p>
+    <div class="io-row" id="undo-row" hidden><button id="undo-import">読み込みを元に戻す</button></div>
+    <p class="io-note">データはこの端末のブラウザ内（localStorage）にのみ保存されます。機種変更・ブラウザ変更の前に書き出してください。</p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="mb-set" hidden>
+  <div class="modal" role="dialog" aria-labelledby="set-title">
+    <div class="modal-head">
+      <span id="set-title">設定 — 色とドメイン</span>
+      <button class="modal-close" data-close="mb-set" aria-label="閉じる">✕</button>
+    </div>
+    <div class="set-group">
+      <h3>体重（kg）</h3>
+      <div class="set-row"><label for="cfg-wt-min">下限（この値以下の色）</label><input type="number" id="cfg-wt-min" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c0"></div>
+      <div class="set-row"><label for="cfg-wt-max">上限（この値以上の色）</label><input type="number" id="cfg-wt-max" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c1"></div>
+    </div>
+    <div class="set-group">
+      <h3>リカバー度（0–100）</h3>
+      <div class="set-row"><label for="cfg-rec-c">100の色（0は背景色）</label><input type="color" id="cfg-rec-c"></div>
+    </div>
+    <div class="set-group">
+      <h3>睡眠スコア（0–100）</h3>
+      <div class="set-row"><label for="cfg-slps-c">100の色（0は背景色）</label><input type="color" id="cfg-slps-c"></div>
+    </div>
+    <div class="set-group">
+      <h3>歩数（3段階・最下段未満は1色目のまま）</h3>
+      <div class="set-row"><label for="cfg-st-v0">段階1（歩）</label><input type="number" id="cfg-st-v0" step="500" inputmode="numeric"><input type="color" id="cfg-st-c0"></div>
+      <div class="set-row"><label for="cfg-st-v1">段階2（歩）</label><input type="number" id="cfg-st-v1" step="500" inputmode="numeric"><input type="color" id="cfg-st-c1"></div>
+      <div class="set-row"><label for="cfg-st-v2">段階3＝上限（歩）</label><input type="number" id="cfg-st-v2" step="500" inputmode="numeric"><input type="color" id="cfg-st-c2"></div>
+    </div>
+    <div class="set-group">
+      <h3>睡眠バー</h3>
+      <div class="set-row"><label for="cfg-sb-scale">バーの目盛り上限（時間）</label><input type="number" id="cfg-sb-scale" min="6" max="24" step="1" inputmode="numeric"></div>
+      <div class="set-row"><label for="cfg-sb-deep">深い睡眠</label><input type="color" id="cfg-sb-deep"></div>
+      <div class="set-row"><label for="cfg-sb-light">浅い睡眠</label><input type="color" id="cfg-sb-light"></div>
+      <div class="set-row"><label for="cfg-sb-rem">レム睡眠</label><input type="color" id="cfg-sb-rem"></div>
+      <div class="set-row"><label for="cfg-sb-wake">覚醒</label><input type="color" id="cfg-sb-wake"></div>
+      <div class="set-row"><label for="cfg-sb-alcline">前日飲酒ライン</label><input type="color" id="cfg-sb-alcline"></div>
+    </div>
+    <div class="set-group">
+      <h3>睡眠ページのバー（3段階・短い未満は1色目、長い以上は3色目）</h3>
+      <div class="set-row"><label for="cfg-sl-v0">短い（時間）</label><input type="number" id="cfg-sl-v0" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c0"></div>
+      <div class="set-row"><label for="cfg-sl-v1">平均（時間）</label><input type="number" id="cfg-sl-v1" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c1"></div>
+      <div class="set-row"><label for="cfg-sl-v2">長い（時間）</label><input type="number" id="cfg-sl-v2" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c2"></div>
+    </div>
+    <div class="io-row"><button id="cfg-reset">初期設定に戻す</button></div>
+    <p class="io-note">変更は即時保存され、グリッドとグラフに反映されます。</p>
+  </div>
+</div>
+
+<div id="tooltip" role="status"></div>
+
+<script>
+/* TEST SEED — 検証用: 2026-08 のダミーデータを投入 */
+(function () {
+  const db = {};
+  for (let d = 1; d <= 31; d++) {
+    const k = "2026-08-" + String(d).padStart(2, "0");
+    const r = (i) => { const x = Math.sin(d * 12.9898 + i * 78.233) * 43758.5453; return x - Math.floor(x); };
+    const slp = 4.5 + r(1) * 5;
+    db[k] = {
+      bed: r(2) > 0.3, alc: r(3) > 0.6, sauna: r(4) > 0.75, eng: r(5) > 0.5,
+      rec: Math.round(30 + r(6) * 65),
+      slps: Math.round(40 + r(7) * 55),
+      wt: Math.round((63 + r(8) * 4) * 10) / 10,
+      steps: Math.round(1500 + r(9) * 12000),
+      slp: Math.round(slp * 12) / 12,
+      deep: Math.round(r(10) * 2 * 12) / 12,
+      light: Math.round((slp * 0.5) * 12) / 12,
+      rem: Math.round(r(11) * 2 * 12) / 12,
+      wake: Math.round(r(12) * 0.8 * 12) / 12,
+      bedt: Math.round((22.5 + r(13) * 2.5) * 12) / 12 % 24,
+      wket: Math.round((6 + r(14) * 2.5) * 12) / 12,
+    };
+    if (d % 6 === 0) delete db[k].wt;
+    if (d % 9 === 0) delete db[k].slp;
+  }
+  localStorage.setItem("score-almanac:vtest", JSON.stringify(db));
+  localStorage.removeItem("score-almanac:vtest:cfg");
+})();
+</script>
+<script>
+"use strict";
+/* ── data model ───────────────────────────── */
+const STORE_KEY = "score-almanac:vtest";
+const BOOLS = [
+  { key: "bed",   label: "ベッドで寝た", short: "ベ", cvar: "--c-alc", bool: true },
+  { key: "alc",   label: "酒を飲んだ",   short: "酒", cvar: "--c-alc", bool: true },
+  { key: "sauna", label: "サウナ",       short: "サ", bool: true },
+  { key: "eng",   label: "英語の勉強",   short: "英", bool: true },
+];
+/* time-typed metric (HHMM input · h:mm display · stored as decimal hours) */
+function hmSplit(v) { let h = Math.floor(v), m2 = Math.round((v - h) * 60); if (m2 === 60) { h++; m2 = 0; } return [h, m2]; }
+const HM = {
+  unit: "", min: 0, max: 24, step: 1, fixed: null, inputmode: "numeric", type: "text", ph: "0000", hint: "hhmm",
+  fmt: v => { const [h, m2] = hmSplit(v); return h + "h" + String(m2).padStart(2, "0") + "m"; },
+  toInput: v => { const [h, m2] = hmSplit(v); return String(h).padStart(2, "0") + String(m2).padStart(2, "0"); },
+  fromInput: s => { s = String(s).trim(); if (!/^\d{1,4}$/.test(s)) return null; s = s.padStart(4, "0"); const h = +s.slice(0, 2), m2 = +s.slice(2); if (h > 23 || m2 > 59) return null; return h + m2 / 60; },
+  cellFmt: v => { const [h, m2] = hmSplit(v); return h + ":" + String(m2).padStart(2, "0"); },
+};
+const NUMS = [
+  /* ramp: [hue, topL_light, topC_light, topL_dark, topC_dark] — cell shade runs tint→this endpoint */
+  /* 体重: 固定ドメイン60-70kg・2色グラデ 60=#066FCA(青 L54) → 70=#FF6D64(赤 L71) */
+  { key: "wt",    label: "体重",       short: "kg",  unit: "kg", min: 20, max: 200, step: 0.1, fixed: [60, 70],  inputmode: "decimal", cvar: "--c-wt",    stops: [{ t: 0, c: "#066FCA", L: 54 }, { t: 1, c: "#FF6D64", L: 71 }], interp: true, fmt: v => v.toFixed(1), cellFmt: v => v.toFixed(1) },
+  /* リカバー度: 0=背景色 → 100=#ff499e(桃 L69) */
+  { key: "rec",   label: "リカバー度", short: "リカ", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-rec",   mix: { c: "#ff499e", L: 69 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
+  /* 睡眠スコア: 0=背景色 → 100=#6f2dbd(深い眠りの紫 L47) */
+  { key: "slps",  label: "睡眠スコア", short: "眠ス", unit: "",   min: 0, max: 100, step: 1,    fixed: [0, 100], inputmode: "numeric", cvar: "--c-slps",  mix: { c: "#6f2dbd", L: 47 }, fmt: v => String(v), cellFmt: v => String(Math.round(v)) },
+  /* 就寝・起床: 時刻(HHMM)。「その朝起きた睡眠」を当日に記入。平均・折れ線は睡眠モーダルで代替するため除外 */
+  Object.assign({}, HM, { key: "bedt",  label: "就寝時刻",  short: "就", cvar: "--c-slp",   fmt: HM.cellFmt, noavg: true, nochart: true }),
+  Object.assign({}, HM, { key: "wket",  label: "起床時刻",  short: "起", cvar: "--c-slp",   fmt: HM.cellFmt, noavg: true, nochart: true }),
+  Object.assign({}, HM, { key: "slp",   label: "睡眠時間",  short: "眠", cvar: "--c-slp",   ramp: [302, 58, 0.130, 73, 0.100], group: "sleep" }),
+  Object.assign({}, HM, { key: "wake",  label: "覚醒",      short: "覚", cvar: "--c-wake",  ramp: [194, 64, 0.100, 94, 0.065], fixed: [0, 1] }),
+  Object.assign({}, HM, { key: "rem",   label: "レム睡眠",  short: "レ", cvar: "--c-rem",   ramp: [251, 48, 0.110, 85, 0.046], fixed: [0, 3] }),
+  Object.assign({}, HM, { key: "light", label: "浅い睡眠",  short: "浅", cvar: "--c-light", ramp: [312, 62, 0.165, 62, 0.165], fixed: [0, 8] }),
+  Object.assign({}, HM, { key: "deep",  label: "深い睡眠",  short: "深", cvar: "--c-deep",  ramp: [299, 47, 0.208, 56, 0.190], fixed: [0, 3] }),
+  /* 歩数: 固定ドメイン0-10000歩・3段グラデ 2000=#49b6ff(青) → 5000=#a480cf(紫) → 10000=#ff499e(桃)。2000未満は青 */
+  { key: "steps", label: "歩数",       short: "歩",  unit: "歩", min: 0, max: 200000, step: 1, fixed: [0, 10000], inputmode: "numeric", cvar: "--c-steps", stops: [{ t: 0.2, c: "#49b6ff", L: 74 }, { t: 0.5, c: "#a480cf", L: 66 }, { t: 1, c: "#ff499e", L: 69 }], fmt: v => v.toLocaleString("ja-JP"), cellFmt: v => v >= 1000 ? (Math.round(v / 100) / 10).toFixed(1).replace(/\.0$/, "") + "k" : String(v) },
+];
+const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
+darkMq.addEventListener("change", () => renderMonth());
+/* overview column order: 体重・リカ・睡眠積み上げバー | ベ・酒・サ・英 | 歩 (null = group gap) */
+const SLEEP_BAR = { sleepbar: true, scale: 10, segs: [["deep", "深"], ["light", "浅"], ["rem", "レ"], ["wake", "覚"]] };
+/* 睡眠ページ: 就寝→起床バーの3段グラデ（時間長 短→平均→長）。⚙で時間と色を編集可 */
+const SLP_RAMP = { s: [{ v: 5, c: "#066fca", L: 54 }, { v: 7, c: "#6f2dbd", L: 47 }, { v: 9, c: "#ff6d64", L: 71 }] };
+/* 時間長 → ランプ色（下限未満は1色目のまま・上限超は3色目のまま） */
+function slpRampColor(v) {
+  const s = SLP_RAMP.s;
+  if (v <= s[0].v) return { bg: s[0].c, L: s[0].L };
+  if (v >= s[2].v) return { bg: s[2].c, L: s[2].L };
+  const a = v <= s[1].v ? s[0] : s[1], b = v <= s[1].v ? s[1] : s[2];
+  const t = (v - a.v) / ((b.v - a.v) || 1);
+  return { bg: "color-mix(in oklab, " + b.c + " " + Math.round(t * 100) + "%, " + a.c + ")", L: a.L + (b.L - a.L) * t };
+}
+const NUMBYKEY = {};
+NUMS.forEach(n => NUMBYKEY[n.key] = n);
+/* overview columns: 体重・歩 | 酒・ベッド・リカ・眠ス・睡眠バー(数字内包) | サ・英 */
+const OV_COLS = [NUMBYKEY.wt, NUMBYKEY.steps, BOOLS[1], BOOLS[0], NUMBYKEY.rec, NUMBYKEY.slps, SLEEP_BAR, null, BOOLS[2], BOOLS[3]];
+const DOW = ["日", "月", "火", "水", "木", "金", "土"];
+
+let db = load();
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  catch { return {}; }
+}
+function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(db)); }
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+let viewMonth = todayKey().slice(0, 7);   // "YYYY-MM"
+let entryDate = todayKey();               // "YYYY-MM-DD"
+
+function daysInMonth(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function dayKey(ym, d) { return ym + "-" + String(d).padStart(2, "0"); }
+
+/* ── entry panel ──────────────────────────── */
+const togglesEl = document.getElementById("toggles");
+const numericsEl = document.getElementById("numerics");
+const dateEl = document.getElementById("entry-date");
+const saveNote = document.getElementById("save-note");
+let saveNoteTimer = null;
+
+BOOLS.forEach(b => {
+  const lab = document.createElement("label");
+  lab.className = "toggle";
+  lab.innerHTML = '<input type="checkbox" data-key="' + b.key + '"><span class="dot" aria-hidden="true"></span><span class="lbl">' + b.label + "</span>";
+  togglesEl.appendChild(lab);
+});
+NUMS.forEach(n => {
+  const div = document.createElement("div");
+  div.className = "numeric";
+  const attrs = n.type === "text"
+    ? 'type="text" maxlength="4" pattern="[0-9]*"'
+    : 'type="number" min="' + n.min + '" max="' + n.max + '" step="' + n.step + '"';
+  const hint = n.hint || n.unit;
+  div.innerHTML = '<label for="in-' + n.key + '">' + n.label + '</label>'
+    + '<div class="inrow"><input id="in-' + n.key + '" ' + attrs + ' data-key="' + n.key + '" inputmode="' + n.inputmode + '" placeholder="' + (n.ph || "—") + '">'
+    + (hint ? '<span class="unit">' + hint + "</span>" : "") + "</div>";
+  numericsEl.appendChild(div);
+});
+
+function readEntryToForm() {
+  dateEl.value = entryDate;
+  const tp = entryDate.split("-").map(Number);
+  document.getElementById("entry-title").textContent = tp[1] + "月" + tp[2] + "日（" + DOW[new Date(tp[0], tp[1] - 1, tp[2]).getDay()] + "）の記入";
+  const rec = db[entryDate] || {};
+  togglesEl.querySelectorAll("input").forEach(i => { i.checked = rec[i.dataset.key] === true; });
+  numericsEl.querySelectorAll("input").forEach(i => {
+    const def = NUMBYKEY[i.dataset.key];
+    const v = rec[i.dataset.key];
+    i.value = (typeof v === "number" && isFinite(v)) ? (def.toInput ? def.toInput(v) : v) : "";
+  });
+}
+function writeFormToDb() {
+  const rec = {};
+  togglesEl.querySelectorAll("input").forEach(i => {
+    if (i.checked) rec[i.dataset.key] = true;
+    else if ((db[entryDate] || {})[i.dataset.key] !== undefined || i.dataset.touched) rec[i.dataset.key] = false;
+  });
+  numericsEl.querySelectorAll("input").forEach(i => {
+    const def = NUMBYKEY[i.dataset.key];
+    const v = def.fromInput ? def.fromInput(i.value) : parseFloat(i.value);
+    if (v !== null && isFinite(v)) rec[i.dataset.key] = v;
+  });
+  /* 睡眠時間が空欄なら就寝→起床から自動計算（日またぎ対応） */
+  if (rec.slp === undefined && typeof rec.bedt === "number" && typeof rec.wket === "number") {
+    const dur = (rec.wket - rec.bedt + 24) % 24;
+    if (dur > 0) rec.slp = Math.round(dur * 60) / 60;
+  }
+  if (Object.keys(rec).length) db[entryDate] = rec; else delete db[entryDate];
+  persist();
+  flashSaved();
+  readEntryToForm();
+  renderMonth();
+}
+function flashSaved() {
+  const t = new Date();
+  saveNote.textContent = "保存 " + String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  saveNote.classList.add("shown");
+  clearTimeout(saveNoteTimer);
+  saveNoteTimer = setTimeout(() => saveNote.classList.remove("shown"), 2000);
+}
+togglesEl.addEventListener("change", e => { e.target.dataset.touched = "1"; writeFormToDb(); });
+numericsEl.addEventListener("change", writeFormToDb);
+dateEl.addEventListener("change", () => {
+  if (!dateEl.value) return;
+  entryDate = dateEl.value;
+  if (entryDate.slice(0, 7) !== viewMonth) { viewMonth = entryDate.slice(0, 7); }
+  render();
+});
+function stepDay(delta) {
+  const [y, m, d] = entryDate.split("-").map(Number);
+  const nd = new Date(y, m - 1, d + delta);
+  entryDate = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0") + "-" + String(nd.getDate()).padStart(2, "0");
+  if (entryDate.slice(0, 7) !== viewMonth) viewMonth = entryDate.slice(0, 7);
+  render();
+}
+document.getElementById("prev-day").addEventListener("click", () => stepDay(-1));
+document.getElementById("next-day").addEventListener("click", () => stepDay(1));
+
+/* ── modals ───────────────────────────────── */
+function openModal(id) { document.getElementById(id).hidden = false; }
+function closeModal(id) { document.getElementById(id).hidden = true; }
+document.querySelectorAll(".modal-close").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
+document.querySelectorAll(".modal-backdrop").forEach(bd => bd.addEventListener("click", e => { if (e.target === bd) bd.hidden = true; }));
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal-backdrop").forEach(bd => bd.hidden = true); });
+document.getElementById("open-charts").addEventListener("click", () => openModal("mb-charts"));
+document.getElementById("open-sleep").addEventListener("click", () => openModal("mb-sleep"));
+document.getElementById("open-data").addEventListener("click", () => openModal("mb-data"));
+document.getElementById("open-set").addEventListener("click", () => openModal("mb-set"));
+function openEntry(dateKey) {
+  entryDate = dateKey;
+  readEntryToForm();
+  openModal("mb-entry");
+}
+
+/* ── month navigation ─────────────────────── */
+function stepMonth(delta) {
+  const [y, m] = viewMonth.split("-").map(Number);
+  const nd = new Date(y, m - 1 + delta, 1);
+  viewMonth = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0");
+  renderMonth();
+}
+document.getElementById("prev-month").addEventListener("click", () => stepMonth(-1));
+document.getElementById("next-month").addEventListener("click", () => stepMonth(1));
+
+/* ── summary: stat-tile dashboard ─────────── */
+function renderSummary() {
+  const n = daysInMonth(viewMonth);
+  const wrap = document.getElementById("summary");
+  wrap.innerHTML = "";
+  const tile = (label, val, unit, cvar) => {
+    const t = document.createElement("div");
+    t.className = "tile";
+    if (cvar) t.style.setProperty("--tc", "var(" + cvar + ")");
+    const l = document.createElement("span");
+    l.className = "t-label";
+    l.textContent = label;
+    const v = document.createElement("span");
+    v.className = "t-val";
+    v.textContent = val;
+    if (unit) {
+      const u = document.createElement("span");
+      u.className = "t-unit";
+      u.textContent = unit;
+      v.appendChild(u);
+    }
+    t.appendChild(l);
+    t.appendChild(v);
+    wrap.appendChild(t);
+  };
+  BOOLS.forEach(b => {
+    let c = 0;
+    for (let d = 1; d <= n; d++) if ((db[dayKey(viewMonth, d)] || {})[b.key] === true) c++;
+    tile(b.label, String(c), "日/" + n, b.cvar);
+  });
+  NUMS.forEach(m => {
+    if (m.noavg) return;
+    const vals = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[m.key];
+      if (typeof v === "number" && isFinite(v)) vals.push(v);
+    }
+    if (!vals.length) return;
+    const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
+    tile(m.label + "・月平均", m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100), m.unit || "", m.cvar);
+  });
+}
+
+/* ── sleep timeline: 就寝→起床の一覧 ────────── */
+function renderSleep() {
+  const wrap = document.getElementById("sleep-list");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  const [y, m] = viewMonth.split("-").map(Number);
+  const todayD = viewMonth === todayKey().slice(0, 7) ? Number(todayKey().slice(8)) : -1;
+  const clk = h => NUMBYKEY.slp.cellFmt(((h % 24) + 24) % 24);
+  const rows = [];
+  for (let d = 1; d <= n; d++) {
+    const rec = db[dayKey(viewMonth, d)] || {};
+    let b = typeof rec.bedt === "number" && isFinite(rec.bedt) ? rec.bedt : null;
+    const w = typeof rec.wket === "number" && isFinite(rec.wket) ? rec.wket : null;
+    if (b !== null && b >= 12) b -= 24;   /* 正午以降の就寝は前夜(負の時刻)として扱う */
+    if (b !== null || w !== null) rows.push({ d, b, w });
+  }
+  if (!rows.length) {
+    const p = document.createElement("p");
+    p.className = "empty-note";
+    p.textContent = "就寝・起床の記録がまだありません。記入欄の「就寝時刻」「起床時刻」から入力できます。";
+    wrap.appendChild(p);
+    return;
+  }
+  /* 固定ドメイン: 前夜21:00(-3)〜当日12:00。範囲外は端にクランプして描画 */
+  const lo = -3, hi = 12;
+  const span = hi - lo;
+  const step = 3;
+
+  const W = 360, ML = 30, MR = 8, MT = 14, MB = 14, RH = 13;
+  const H = MT + n * RH + MB;
+  const X = h => ML + (Math.min(hi, Math.max(lo, h)) - lo) / span * (W - ML - MR);
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "日別の就寝から起床までの帯グラフ。数値は月間一覧の表を参照。");
+
+  for (let h = Math.ceil(lo / step) * step; h <= hi; h += step) {
+    const x = X(h);
+    const ln = document.createElementNS(svgNS, "line");
+    ln.setAttribute("x1", x); ln.setAttribute("x2", x);
+    ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB);
+    ln.setAttribute("class", "gridline");
+    svg.appendChild(ln);
+    const tx = document.createElementNS(svgNS, "text");
+    tx.setAttribute("x", x); tx.setAttribute("y", 9);
+    tx.setAttribute("text-anchor", "middle");
+    tx.setAttribute("class", "axislabel");
+    tx.textContent = ((h % 24) + 24) % 24 + "時";
+    svg.appendChild(tx);
+  }
+  /* 平均就寝・平均起床の縦線（下端にラベル） */
+  const bs = rows.filter(r => r.b !== null).map(r => r.b);
+  const ws = rows.filter(r => r.w !== null).map(r => r.w);
+  [[bs, "就寝"], [ws, "起床"]].forEach(([vals, lb]) => {
+    if (!vals.length) return;
+    const avg = vals.reduce((a, x) => a + x, 0) / vals.length;
+    const x = X(avg);
+    const ln = document.createElementNS(svgNS, "line");
+    ln.setAttribute("x1", x); ln.setAttribute("x2", x);
+    ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB + 3);
+    ln.setAttribute("stroke-dasharray", "1.5 2.5");
+    ln.setAttribute("style", "stroke: #ff499e; stroke-width: 1");
+    svg.appendChild(ln);
+    const tx = document.createElementNS(svgNS, "text");
+    tx.setAttribute("x", x); tx.setAttribute("y", H - 4);
+    tx.setAttribute("text-anchor", "middle");
+    tx.setAttribute("class", "axislabel avgl");
+    tx.textContent = lb + "平均 " + clk(avg);
+    svg.appendChild(tx);
+  });
+  const zero = X(0);   /* 0時の基準線を少し濃く */
+  if (0 >= lo && 0 <= hi) {
+    const ln = document.createElementNS(svgNS, "line");
+    ln.setAttribute("x1", zero); ln.setAttribute("x2", zero);
+    ln.setAttribute("y1", MT); ln.setAttribute("y2", H - MB);
+    ln.setAttribute("class", "gridline");
+    ln.setAttribute("stroke-dasharray", "2 2");
+    ln.setAttribute("style", "stroke: var(--color-muted)");
+    svg.appendChild(ln);
+  }
+
+  const byDay = {};
+  rows.forEach(r => byDay[r.d] = r);
+  for (let d = 1; d <= n; d++) {
+    const yC = MT + (d - 0.5) * RH;
+    const dow = new Date(y, m - 1, d).getDay();
+    const dt = document.createElementNS(svgNS, "text");
+    dt.setAttribute("x", ML - 4); dt.setAttribute("y", yC + 3);
+    dt.setAttribute("text-anchor", "end");
+    dt.setAttribute("class", "axislabel");
+    if (dow === 0 || dow === 6 || d === todayD) dt.setAttribute("style", "fill: var(--color-accent)");
+    dt.textContent = d + DOW[dow];
+    svg.appendChild(dt);
+    const r = byDay[d];
+    if (!r) continue;
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("style", "cursor: pointer");
+    g.dataset.date = dayKey(viewMonth, d);
+    if (r.b !== null && r.w !== null && r.w > r.b) {
+      const rc = document.createElementNS(svgNS, "rect");
+      rc.setAttribute("x", X(r.b)); rc.setAttribute("y", yC - (RH - 4) / 2);
+      rc.setAttribute("width", X(r.w) - X(r.b)); rc.setAttribute("height", RH - 4);
+      rc.setAttribute("rx", 2.5);
+      const rcol = slpRampColor(r.w - r.b);
+      rc.setAttribute("style", "fill: " + rcol.bg);
+      g.appendChild(rc);
+      const t1 = document.createElementNS(svgNS, "text");
+      t1.setAttribute("x", X(r.b) - 3); t1.setAttribute("y", yC + 3);
+      t1.setAttribute("text-anchor", "end");
+      t1.setAttribute("class", "axislabel");
+      t1.textContent = clk(r.b);
+      g.appendChild(t1);
+      const t2 = document.createElementNS(svgNS, "text");
+      t2.setAttribute("x", X(r.w) + 3); t2.setAttribute("y", yC + 3);
+      t2.setAttribute("class", "axislabel");
+      t2.textContent = clk(r.w);
+      g.appendChild(t2);
+      if (X(r.w) - X(r.b) > 52) {
+        const t3 = document.createElementNS(svgNS, "text");
+        t3.setAttribute("x", (X(r.b) + X(r.w)) / 2); t3.setAttribute("y", yC + 3);
+        t3.setAttribute("text-anchor", "middle");
+        t3.setAttribute("class", "axislabel");
+        t3.setAttribute("style", "fill: var(" + (rcol.L < 64 ? "--sb-text-on-dark" : "--sb-text-on-light") + "); opacity: 0.92");
+        t3.textContent = NUMBYKEY.slp.cellFmt(r.w - r.b);
+        g.appendChild(t3);
+      }
+    } else {
+      /* 片方だけ記入 → 点で示す */
+      [["b", r.b], ["w", r.w]].forEach(([, v]) => {
+        if (v === null) return;
+        const c = document.createElementNS(svgNS, "circle");
+        c.setAttribute("cx", X(v)); c.setAttribute("cy", yC);
+        c.setAttribute("r", 2.5);
+        c.setAttribute("fill", SLP_RAMP.s[1].c);
+        g.appendChild(c);
+        const tl = document.createElementNS(svgNS, "text");
+        tl.setAttribute("x", X(v) + 4); tl.setAttribute("y", yC + 3);
+        tl.setAttribute("class", "axislabel");
+        tl.textContent = clk(v);
+        g.appendChild(tl);
+      });
+    }
+    svg.appendChild(g);
+  }
+  svg.addEventListener("click", ev => {
+    const g = ev.target.closest("[data-date]");
+    if (g) { closeModal("mb-sleep"); openEntry(g.dataset.date); }
+  });
+  wrap.appendChild(svg);
+}
+
+/* ── month table ──────────────────────────── */
+function renderTable() {
+  const n = daysInMonth(viewMonth);
+  const [y, m] = viewMonth.split("-").map(Number);
+  const tk = todayKey();
+  const t = document.getElementById("month-table");
+  let html = '<thead><tr><th class="date" scope="col">日</th>';
+  BOOLS.forEach(b => html += '<th scope="col" title="' + b.label + '">' + b.short + "</th>");
+  NUMS.forEach(x => html += '<th scope="col" title="' + x.label + '">' + x.short + "</th>");
+  html += "</tr></thead><tbody>";
+  for (let d = 1; d <= n; d++) {
+    const key = dayKey(viewMonth, d);
+    const rec = db[key] || {};
+    const dow = new Date(y, m - 1, d).getDay();
+    const cls = [dow === 0 || dow === 6 ? "weekend" : "", key === tk ? "today" : ""].join(" ").trim();
+    html += '<tr tabindex="0" data-date="' + key + '"' + (cls ? ' class="' + cls + '"' : "") + ">";
+    html += '<td class="date">' + d + '<span class="dow">' + DOW[dow] + "</span></td>";
+    BOOLS.forEach(b => {
+      const v = rec[b.key];
+      html += "<td>" + (v === true ? '<span class="mark yes" role="img" aria-label="' + b.label + '：した"></span>'
+                      : v === false ? '<span class="mark no" role="img" aria-label="' + b.label + '：しなかった"></span>' : "") + "</td>";
+    });
+    NUMS.forEach(x => {
+      const v = rec[x.key];
+      html += '<td class="num">' + (typeof v === "number" && isFinite(v) ? x.fmt(v) : "") + "</td>";
+    });
+    html += "</tr>";
+  }
+  html += "</tbody>";
+  t.innerHTML = html;
+  t.querySelectorAll("tbody tr").forEach(tr => {
+    const go = () => openEntry(tr.dataset.date);
+    tr.addEventListener("click", go);
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+}
+
+/* ── shared scale helper ──────────────────── */
+function domainFor(mdef, vals) {
+  if (mdef.fixed) return mdef.fixed.slice();
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = (hi - lo) || Math.abs(hi) * 0.05 || 1;
+  lo -= span * 0.15; hi += span * 0.15;
+  if (mdef.min === 0 && lo < 0) lo = 0;
+  return [lo, hi];
+}
+
+/* ── month overview: vertical calendar heatmap ── */
+function renderOverview() {
+  const wrap = document.getElementById("overview");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  const [yy, mm] = viewMonth.split("-").map(Number);
+  const tk = todayKey();
+  const todayD = tk.slice(0, 7) === viewMonth ? Number(tk.slice(8)) : 0;
+
+  const domains = {};
+  NUMS.forEach(mdef => {
+    const vals = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
+      if (typeof v === "number" && isFinite(v)) vals.push(v);
+    }
+    domains[mdef.key] = mdef.fixed ? mdef.fixed.slice() : (vals.length ? domainFor(mdef, vals) : [0, 1]);
+  });
+  // linear interpolation between entered days (color-only fill on gap days)
+  const interpMaps = {};
+  NUMS.filter(x => x.interp).forEach(x => {
+    const pts = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[x.key];
+      if (typeof v === "number" && isFinite(v)) pts.push([d, v]);
+    }
+    const map = {};
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [d1, v1] = pts[i], [d2, v2] = pts[i + 1];
+      for (let dd = d1 + 1; dd < d2; dd++) map[dd] = v1 + (v2 - v1) * (dd - d1) / (d2 - d1);
+    }
+    interpMaps[x.key] = map;
+  });
+
+  // sleep-group metrics share one domain (0 → month max) so shades are comparable
+  const sleepKeys = NUMS.filter(x => x.group === "sleep").map(x => x.key);
+  let sleepMax = 0;
+  sleepKeys.forEach(k => {
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[k];
+      if (typeof v === "number" && isFinite(v) && v > sleepMax) sleepMax = v;
+    }
+  });
+  sleepKeys.forEach(k => { domains[k] = [0, sleepMax || 1]; });
+
+  const grid = document.createElement("div");
+  grid.className = "ov-grid";
+
+  const corner = document.createElement("div");
+  grid.appendChild(corner);
+  OV_COLS.forEach(c => {
+    if (!c) { grid.appendChild(Object.assign(document.createElement("div"), { className: "ov-sp" })); return; }
+    const h = document.createElement("div");
+    if (c.sleepbar) {
+      h.className = "ov-h bar";
+      h.textContent = "睡眠 0–" + c.scale + "h";
+      h.title = "睡眠の積み上げ（深い・浅い・レム・覚醒）";
+    } else {
+      h.className = "ov-h";
+      h.textContent = c.short;
+      h.title = c.label;
+      if (c.cvar) h.style.color = "var(" + c.cvar + ")";
+    }
+    grid.appendChild(h);
+  });
+
+  for (let d = 1; d <= n; d++) {
+    const key = dayKey(viewMonth, d);
+    const rec = db[key] || {};
+    const dow = new Date(yy, mm - 1, d).getDay();
+
+    const dt = document.createElement("div");
+    dt.className = "ov-date" + (dow === 0 || dow === 6 ? " we" : "") + (d === todayD ? " today" : "");
+    dt.textContent = d + DOW[dow];
+    dt.dataset.d = d;
+    dt.dataset.tip = "を記入欄へ";
+    grid.appendChild(dt);
+
+    OV_COLS.forEach(c => {
+      if (!c) { grid.appendChild(Object.assign(document.createElement("div"), { className: "ov-sp" })); return; }
+      const cell = document.createElement("div");
+      cell.className = "ov-cell" + (d === todayD ? " today" : "");
+      if (c.sleepbar) {
+        cell.classList.add("ov-bar");
+        const pd = new Date(yy, mm - 1, d - 1);
+        const prevKey = pd.getFullYear() + "-" + String(pd.getMonth() + 1).padStart(2, "0") + "-" + String(pd.getDate()).padStart(2, "0");
+        if ((db[prevKey] || {}).alc === true) cell.classList.add("prev-alc");
+        const hours = {};
+        let sum = 0;
+        c.segs.forEach(sg => {
+          const sv = rec[sg[0]];
+          if (typeof sv === "number" && isFinite(sv)) { hours[sg[0]] = sv; sum += sv; }
+        });
+        const factor = sum > c.scale ? c.scale / sum : 1;
+        const tips = [];
+        c.segs.forEach(sg => {
+          const sv = hours[sg[0]];
+          if (sv === undefined || sv <= 0) { if (sv !== undefined) tips.push(sg[1] + "0:00"); return; }
+          const seg = document.createElement("div");
+          seg.className = "sb " + sg[0] + (hexL(cfg.sleep[sg[0]]) < 64 ? " lt" : "");
+          seg.style.width = (sv * factor / c.scale * 100) + "%";
+          const lb = document.createElement("span");
+          lb.className = "lb";
+          lb.textContent = sv >= 1 ? NUMBYKEY.slp.cellFmt(sv) : Math.round(sv * 60) + "m";
+          seg.appendChild(lb);
+          cell.appendChild(seg);
+          tips.push(sg[1] + NUMBYKEY.slp.cellFmt(sv));
+        });
+        const total = typeof rec.slp === "number" && isFinite(rec.slp) ? rec.slp : (sum > 0 ? sum : null);
+        if (total !== null) {
+          const tot = document.createElement("span");
+          tot.className = "tot";
+          tot.textContent = NUMBYKEY.slp.cellFmt(total);
+          cell.appendChild(tot);
+        }
+        cell.dataset.tip = "睡眠 " + (total !== null ? NUMBYKEY.slp.fmt(total) : "未記入") + (tips.length ? "（" + tips.join(" ") + "）" : "");
+        cell.dataset.d = d;
+        grid.appendChild(cell);
+        return;
+      }
+      let v = rec[c.key];
+      if (!c.bool) {
+        let isInterp = false;
+        if (!(typeof v === "number" && isFinite(v)) && c.interp && interpMaps[c.key][d] !== undefined) {
+          v = interpMaps[c.key][d];
+          isInterp = true;
+        }
+        const has = typeof v === "number" && isFinite(v);
+        if (has) {
+          const lo = domains[c.key][0], hi = domains[c.key][1];
+          const t = Math.min(1, Math.max(0, hi === lo ? 1 : (v - lo) / (hi - lo)));
+          const dk = darkMq.matches;
+          cell.classList.add("num", "fill");
+          if (c.mix) {
+            cell.style.background = "color-mix(in oklab, " + c.mix.c + " " + Math.round(t * 100) + "%, var(--color-paper-2))";
+            const pL = dk ? 20 : 93;
+            const Le = pL + (c.mix.L - pL) * t;
+            if (dk ? Le >= 63 : Le <= 64) cell.classList.add("hi");
+          } else if (c.stops) {
+            const s = c.stops;
+            let si = 0;
+            while (si < s.length - 2 && t > s[si + 1].t) si++;
+            const a = s[si], b2 = s[si + 1];
+            const tt = Math.min(1, Math.max(0, (t - a.t) / (b2.t - a.t)));
+            cell.style.background = "color-mix(in oklab, " + b2.c + " " + Math.round(tt * 100) + "%, " + a.c + ")";
+            const Le = a.L + (b2.L - a.L) * tt;
+            if (dk ? Le >= 63 : Le <= 64) cell.classList.add("hi");
+          } else {
+            const H = c.ramp[0], Lt = dk ? c.ramp[3] : c.ramp[1], Cm = dk ? c.ramp[4] : c.ramp[2];
+            const L0 = dk ? 24 : 90, C0 = dk ? 0.03 : 0.035;
+            const L = Math.round((L0 + (Lt - L0) * t) * 10) / 10;
+            const C = Math.round((C0 + (Cm - C0) * t) * 1000) / 1000;
+            cell.style.background = "oklch(" + L + "% " + C + " " + H + ")";
+            if (dk ? L >= 52 : L <= 64) cell.classList.add("hi");
+          }
+          if (!isInterp) cell.textContent = c.cellFmt(v);
+        }
+        cell.dataset.tip = c.label + " " + (has ? (isInterp ? "約" + c.fmt(Math.round(v * 10) / 10) + (c.unit || "") + "（補間）" : c.fmt(v) + (c.unit || "")) : "未記入");
+      } else {
+        if (v === true) { cell.style.background = "var(" + (c.cvar || "--color-check") + ")"; cell.classList.add("fill"); }
+        else if (v === false) cell.classList.add("no");
+        cell.dataset.tip = c.label + "：" + (v === true ? "した" : v === false ? "しなかった" : "未記入");
+      }
+      cell.dataset.d = d;
+      grid.appendChild(cell);
+    });
+  }
+
+  grid.addEventListener("click", ev => {
+    const t = ev.target.closest("[data-d]");
+    if (!t) return;
+    const d = Number(t.dataset.d);
+    if (t.classList.contains("ov-date")) {
+      openEntry(dayKey(viewMonth, d));
+    } else {
+      const rect = t.getBoundingClientRect();
+      showTooltip(mm + "/" + d + " " + t.dataset.tip, ev.clientX, rect.top);
+    }
+    ev.stopPropagation();
+  });
+
+  wrap.appendChild(grid);
+}
+
+/* ── charts: small multiples ──────────────── */
+const tooltip = document.getElementById("tooltip");
+function showTooltip(text, cx, cy) {
+  tooltip.textContent = text;
+  tooltip.classList.add("shown");
+  const pad = 10;
+  requestAnimationFrame(() => {
+    const r = tooltip.getBoundingClientRect();
+    let x = cx - r.width / 2;
+    x = Math.max(pad, Math.min(window.innerWidth - r.width - pad, x));
+    let yy = cy - r.height - 12;
+    if (yy < pad) yy = cy + 16;
+    tooltip.style.left = x + "px";
+    tooltip.style.top = yy + "px";
+  });
+}
+function hideTooltip() { tooltip.classList.remove("shown"); }
+document.addEventListener("click", e => { if (!e.target.closest(".chart svg")) hideTooltip(); });
+
+function renderCharts() {
+  const wrap = document.getElementById("charts");
+  wrap.innerHTML = "";
+  const n = daysInMonth(viewMonth);
+  NUMS.forEach(mdef => {
+    if (mdef.nochart) return;
+    const pts = [];
+    for (let d = 1; d <= n; d++) {
+      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
+      if (typeof v === "number" && isFinite(v)) pts.push({ d, v });
+    }
+    const div = document.createElement("div");
+    div.className = "chart";
+    div.style.setProperty("--mc", "var(" + mdef.cvar + ")");
+    const h3 = document.createElement("h3");
+    h3.textContent = mdef.label + (mdef.unit ? "（" + mdef.unit + "）" : "");
+    div.appendChild(h3);
+    if (pts.length === 0) {
+      const p = document.createElement("p");
+      p.className = "empty-note";
+      p.textContent = "記録なし";
+      div.appendChild(p);
+      wrap.appendChild(div);
+      return;
+    }
+    const vals = pts.map(p => p.v);
+    const latest = pts[pts.length - 1];
+    const stat = document.createElement("span");
+    stat.className = "stat";
+    stat.textContent = "min " + mdef.fmt(Math.min(...vals)) + " · max " + mdef.fmt(Math.max(...vals)) + " · 最新 " + mdef.fmt(latest.v);
+    h3.appendChild(stat);
+
+    const W = 360, H = 96, ML = 34, MR = 8, MT = 8, MB = 16;
+    const dom = domainFor(mdef, vals);
+    if (!mdef.interp) dom[0] = 0; /* 棒グラフはゼロ基線（長さ＝量） */
+    const lo = dom[0], hi = dom[1];
+    const X = d => ML + (d - 1) / (n - 1) * (W - ML - MR);
+    const slot = (W - ML - MR) / n;
+    const dayX = d => mdef.interp ? X(d) : ML + (d - 0.5) * slot;
+    const Y = v => MT + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - MT - MB);
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", mdef.label + "の月間推移。詳細は月間一覧の表を参照。");
+
+    [lo, (lo + hi) / 2, hi].forEach((gv, i) => {
+      const yy = Y(gv);
+      const ln = document.createElementNS(svgNS, "line");
+      ln.setAttribute("x1", ML); ln.setAttribute("x2", W - MR);
+      ln.setAttribute("y1", yy); ln.setAttribute("y2", yy);
+      ln.setAttribute("class", "gridline");
+      svg.appendChild(ln);
+      if (i !== 1) {
+        const tx = document.createElementNS(svgNS, "text");
+        tx.setAttribute("x", ML - 4); tx.setAttribute("y", yy + 3);
+        tx.setAttribute("text-anchor", "end");
+        tx.setAttribute("class", "axislabel");
+        tx.textContent = mdef.key === "steps" ? Math.round(gv / 1000) + "k" : mdef.fmt(Math.round(gv * 10) / 10);
+        svg.appendChild(tx);
+      }
+    });
+    [1, Math.round(n / 2), n].forEach(dd => {
+      const tx = document.createElementNS(svgNS, "text");
+      tx.setAttribute("x", dayX(dd)); tx.setAttribute("y", H - 3);
+      tx.setAttribute("text-anchor", dd === 1 ? "start" : dd === n ? "end" : "middle");
+      tx.setAttribute("class", "axislabel");
+      tx.textContent = dd + "日";
+      svg.appendChild(tx);
+    });
+
+    const tipFor = (p, el) => ev => {
+      ev.stopPropagation();
+      const rect = el.getBoundingClientRect();
+      showTooltip(viewMonth.split("-")[1].replace(/^0/, "") + "/" + p.d + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
+        rect.left + rect.width / 2, rect.top);
+    };
+    if (mdef.interp) {
+      /* 体重: 空白日は前後の記録を直線で結ぶ（1本の折れ線） */
+      if (pts.length > 1) {
+        const pl = document.createElementNS(svgNS, "polyline");
+        pl.setAttribute("points", pts.map(p => X(p.d).toFixed(1) + "," + Y(p.v).toFixed(1)).join(" "));
+        pl.setAttribute("class", "line");
+        svg.appendChild(pl);
+      }
+      pts.forEach(p => {
+        const c = document.createElementNS(svgNS, "circle");
+        c.setAttribute("cx", X(p.d)); c.setAttribute("cy", Y(p.v)); c.setAttribute("r", 3);
+        c.setAttribute("class", "pt");
+        svg.appendChild(c);
+        const hit = document.createElementNS(svgNS, "circle");
+        hit.setAttribute("cx", X(p.d)); hit.setAttribute("cy", Y(p.v)); hit.setAttribute("r", 12);
+        hit.setAttribute("class", "hit");
+        hit.addEventListener("click", tipFor(p, hit));
+        svg.appendChild(hit);
+      });
+    } else {
+      /* 棒グラフ＋月平均の水平線 */
+      const bw = Math.max(2, slot - 2);
+      const base = H - MB;
+      pts.forEach(p => {
+        const y = Y(p.v);
+        const bar = document.createElementNS(svgNS, "rect");
+        bar.setAttribute("x", (dayX(p.d) - bw / 2).toFixed(1)); bar.setAttribute("y", y.toFixed(1));
+        bar.setAttribute("width", bw.toFixed(1)); bar.setAttribute("height", Math.max(0, base - y).toFixed(1));
+        bar.setAttribute("rx", 1.5);
+        bar.setAttribute("class", "bar");
+        svg.appendChild(bar);
+        const hit = document.createElementNS(svgNS, "rect");
+        hit.setAttribute("x", (ML + (p.d - 1) * slot).toFixed(1)); hit.setAttribute("y", MT);
+        hit.setAttribute("width", slot.toFixed(1)); hit.setAttribute("height", H - MT - MB);
+        hit.setAttribute("class", "hit");
+        hit.addEventListener("click", tipFor(p, hit));
+        svg.appendChild(hit);
+      });
+      const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
+      const ay = Y(avg);
+      const al = document.createElementNS(svgNS, "line");
+      al.setAttribute("x1", ML); al.setAttribute("x2", W - MR);
+      al.setAttribute("y1", ay.toFixed(1)); al.setAttribute("y2", ay.toFixed(1));
+      al.setAttribute("class", "avg-line");
+      svg.appendChild(al);
+      const at = document.createElementNS(svgNS, "text");
+      at.setAttribute("x", W - MR);
+      at.setAttribute("y", (ay < MT + 12 ? ay + 10 : ay - 3).toFixed(1));
+      at.setAttribute("text-anchor", "end");
+      at.setAttribute("class", "avg-label");
+      at.textContent = "平均 " + mdef.fmt(mdef.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100);
+      svg.appendChild(at);
+    }
+    div.appendChild(svg);
+    wrap.appendChild(div);
+  });
+}
+
+/* ── data io ──────────────────────────────── */
+const ioStatus = document.getElementById("io-status");
+function setIo(msg, isErr) {
+  ioStatus.textContent = msg;
+  ioStatus.classList.toggle("err", !!isErr);
+}
+function exportPayload() {
+  return JSON.stringify({ app: "score-almanac", version: 1, exported: new Date().toISOString(), data: db }, null, 1);
+}
+document.getElementById("export-json").addEventListener("click", () => {
+  const blob = new Blob([exportPayload()], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "score-almanac-" + todayKey() + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setIo(Object.keys(db).length + "日分をファイルに書き出しました。");
+});
+document.getElementById("copy-json").addEventListener("click", () => {
+  const n = Object.keys(db).length;
+  if (!n) { setIo("この画面にはまだデータがありません。", true); return; }
+  navigator.clipboard.writeText(exportPayload())
+    .then(() => setIo(n + "日分をコピーしました。iPhone側で「貼り付けで読み込む」を押してください。"))
+    .catch(() => setIo("コピーできませんでした。「JSONを書き出す」を使ってください。", true));
+});
+function importText(txt) {
+  setIo("読み込み中…");
+  let obj;
+  try { obj = JSON.parse(txt); }
+  catch { setIo("エラー：JSONとして解釈できません。コピー/ファイルの中身を確認してください。", true); return; }
+  const incoming = obj && obj.data && typeof obj.data === "object" ? obj.data : obj;
+  const keys = Object.keys(incoming || {}).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+  if (!keys.length) { setIo("エラー：日付データが0件でした。書き出し元の画面にデータが入っているか確認してください。", true); return; }
+  localStorage.setItem(STORE_KEY + ":undo", JSON.stringify(db));
+  keys.forEach(k => { db[k] = incoming[k]; });
+  persist();
+  keys.sort();
+  const latest = keys[keys.length - 1];
+  entryDate = latest;
+  viewMonth = latest.slice(0, 7);
+  render();
+  setIo("✓ " + keys.length + "日分を読み込みました（" + keys[0] + "〜" + latest + "）。同じ日付は上書きしています。");
+  document.getElementById("undo-row").hidden = false;
+}
+document.getElementById("undo-import").addEventListener("click", () => {
+  const prev = localStorage.getItem(STORE_KEY + ":undo");
+  if (prev === null) { setIo("戻せる状態がありません。", true); return; }
+  try { db = JSON.parse(prev) || {}; } catch { setIo("エラー：復元データが壊れています。", true); return; }
+  persist();
+  render();
+  document.getElementById("undo-row").hidden = true;
+  setIo("読み込み前の状態に戻しました。");
+});
+document.getElementById("import-json").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (!f) { setIo("ファイルが選択されませんでした。", true); return; }
+  setIo("読み込み中…（" + f.name + "）");
+  f.text().then(importText).catch(() => setIo("エラー：ファイルを読めませんでした。", true));
+  e.target.value = "";
+});
+document.getElementById("paste-json").addEventListener("click", () => {
+  setIo("クリップボードを確認中…");
+  navigator.clipboard.readText()
+    .then(txt => { if (!txt) { setIo("エラー：クリップボードが空です。Mac側で「コピー」を押してから試してください。", true); return; } importText(txt); })
+    .catch(() => setIo("エラー：クリップボードを読めませんでした。もう一度ボタンを押して、許可ダイアログが出たら許可してください。", true));
+});
+
+/* ── settings: user colors & domains ──────── */
+const CFG_KEY = STORE_KEY + ":cfg";
+const DEFAULT_CFG = {
+  wt: { min: 60, max: 70, c0: "#066fca", c1: "#ff6d64" },
+  rec: { c: "#ff499e" },
+  slps: { c: "#6f2dbd" },
+  steps: { s: [{ v: 2000, c: "#49b6ff" }, { v: 5000, c: "#a480cf" }, { v: 10000, c: "#ff499e" }] },
+  sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca", alcline: "#ffffff", r: [{ v: 5, c: "#066fca" }, { v: 7, c: "#6f2dbd" }, { v: 9, c: "#ff6d64" }] },
+};
+function loadCfg() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { c = {}; }
+  return {
+    wt: Object.assign({}, DEFAULT_CFG.wt, c.wt),
+    rec: Object.assign({}, DEFAULT_CFG.rec, c.rec),
+    slps: Object.assign({}, DEFAULT_CFG.slps, c.slps),
+    steps: { s: (c.steps && Array.isArray(c.steps.s) && c.steps.s.length === 3) ? c.steps.s : DEFAULT_CFG.steps.s.map(x => Object.assign({}, x)) },
+    sleep: (() => {
+      const s = Object.assign({}, DEFAULT_CFG.sleep, c.sleep);
+      if (!Array.isArray(s.r) || s.r.length !== 3) s.r = DEFAULT_CFG.sleep.r.map(x => Object.assign({}, x));
+      return s;
+    })(),
+  };
+}
+let cfg = loadCfg();
+function hexL(hex) {
+  const p = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(x => x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  const l = 0.4122214708 * p[0] + 0.5363325363 * p[1] + 0.0514459929 * p[2];
+  const m = 0.2119034982 * p[0] + 0.6806995451 * p[1] + 0.1073969566 * p[2];
+  const s = 0.0883024619 * p[0] + 0.2817188376 * p[1] + 0.6299787005 * p[2];
+  return Math.round((0.2104542553 * Math.cbrt(l) + 0.7936177850 * Math.cbrt(m) - 0.0040720468 * Math.cbrt(s)) * 100);
+}
+function applyCfg() {
+  const w = cfg.wt;
+  const lo2 = Math.min(w.min, w.max), hi2 = Math.max(w.min, w.max);
+  NUMBYKEY.wt.fixed = [lo2, hi2 === lo2 ? lo2 + 1 : hi2];
+  NUMBYKEY.wt.stops = [{ t: 0, c: w.c0, L: hexL(w.c0) }, { t: 1, c: w.c1, L: hexL(w.c1) }];
+  NUMBYKEY.rec.mix = { c: cfg.rec.c, L: hexL(cfg.rec.c) };
+  NUMBYKEY.slps.mix = { c: cfg.slps.c, L: hexL(cfg.slps.c) };
+  const ss = cfg.steps.s.slice().sort((a, b) => a.v - b.v);
+  const top = ss[2].v > 0 ? ss[2].v : 1;
+  NUMBYKEY.steps.fixed = [0, top];
+  NUMBYKEY.steps.stops = ss.map(x => ({ t: Math.min(1, x.v / top), c: x.c, L: hexL(x.c) }));
+  SLEEP_BAR.scale = cfg.sleep.scale;
+  const rt = document.documentElement.style;
+  rt.setProperty("--sb-deep", cfg.sleep.deep);
+  rt.setProperty("--sb-light", cfg.sleep.light);
+  rt.setProperty("--sb-rem", cfg.sleep.rem);
+  rt.setProperty("--sb-wake", cfg.sleep.wake);
+  rt.setProperty("--alc-line", cfg.sleep.alcline);
+  const sr = cfg.sleep.r.slice().sort((a, b) => a.v - b.v);
+  SLP_RAMP.s = sr.map(x => ({ v: x.v, c: x.c, L: hexL(x.c) }));
+  rt.setProperty("--slp-r0", sr[0].c);
+  rt.setProperty("--slp-r1", sr[1].c);
+  rt.setProperty("--slp-r2", sr[2].c);
+  rt.setProperty("--c-wt", w.c1);
+  rt.setProperty("--c-rec", cfg.rec.c);
+  rt.setProperty("--c-slps", cfg.slps.c);
+  rt.setProperty("--c-steps", ss[2].c);
+}
+const CFG_IDS = {
+  "cfg-wt-min": ["wt", "min", "num"], "cfg-wt-max": ["wt", "max", "num"],
+  "cfg-wt-c0": ["wt", "c0", "col"], "cfg-wt-c1": ["wt", "c1", "col"],
+  "cfg-rec-c": ["rec", "c", "col"],
+  "cfg-slps-c": ["slps", "c", "col"],
+  "cfg-sb-scale": ["sleep", "scale", "num"],
+  "cfg-sb-deep": ["sleep", "deep", "col"], "cfg-sb-light": ["sleep", "light", "col"],
+  "cfg-sb-rem": ["sleep", "rem", "col"], "cfg-sb-wake": ["sleep", "wake", "col"],
+  "cfg-sb-alcline": ["sleep", "alcline", "col"],
+};
+function fillCfgForm() {
+  Object.keys(CFG_IDS).forEach(id => {
+    const [g, k] = CFG_IDS[id];
+    document.getElementById(id).value = cfg[g][k];
+  });
+  cfg.steps.s.forEach((x, i) => {
+    document.getElementById("cfg-st-v" + i).value = x.v;
+    document.getElementById("cfg-st-c" + i).value = x.c;
+  });
+  cfg.sleep.r.forEach((x, i) => {
+    document.getElementById("cfg-sl-v" + i).value = x.v;
+    document.getElementById("cfg-sl-c" + i).value = x.c;
+  });
+}
+document.getElementById("mb-set").addEventListener("change", e => {
+  const id = e.target.id;
+  if (CFG_IDS[id]) {
+    const [g, k, ty] = CFG_IDS[id];
+    if (ty === "num") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v)) { fillCfgForm(); return; }
+      cfg[g][k] = v;
+    } else {
+      cfg[g][k] = e.target.value;
+    }
+  } else if (/^cfg-st-[vc][012]$/.test(id)) {
+    const i = Number(id.slice(-1));
+    if (id[7] === "v") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v) || v < 0) { fillCfgForm(); return; }
+      cfg.steps.s[i].v = v;
+    } else {
+      cfg.steps.s[i].c = e.target.value;
+    }
+  } else if (/^cfg-sl-[vc][012]$/.test(id)) {
+    const i = Number(id.slice(-1));
+    if (id[7] === "v") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v) || v < 0) { fillCfgForm(); return; }
+      cfg.sleep.r[i].v = v;
+    } else {
+      cfg.sleep.r[i].c = e.target.value;
+    }
+  } else return;
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  applyCfg();
+  renderMonth();
+});
+document.getElementById("cfg-reset").addEventListener("click", () => {
+  localStorage.removeItem(CFG_KEY);
+  cfg = loadCfg();
+  fillCfgForm();
+  applyCfg();
+  renderMonth();
+});
+
+/* ── render root ──────────────────────────── */
+function renderMonth() {
+  const [y, m] = viewMonth.split("-").map(Number);
+  document.getElementById("mt-month").textContent = m + "月";
+  document.getElementById("mt-year").textContent = String(y);
+  renderOverview();
+  renderSummary();
+  renderSleep();
+  renderTable();
+  renderCharts();
+}
+function render() { readEntryToForm(); renderMonth(); }
+applyCfg();
+fillCfgForm();
+render();
+</script>
+</body>
+</html>
