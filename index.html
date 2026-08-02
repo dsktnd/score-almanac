@@ -591,6 +591,16 @@ details.io summary {
   cursor: pointer;
 }
 .modal .dash { margin-bottom: var(--space-md); }
+/* ── scope toggle（直近◯日／◯月） ─────────── */
+.scope-row { display: flex; gap: 2px; margin-bottom: var(--space-sm); }
+.scope-row button {
+  font-family: var(--font-label); font-size: var(--text-xs);
+  padding: 0.25rem 0.65rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  background: var(--color-paper); color: var(--color-muted);
+  border-radius: var(--radius); cursor: pointer;
+}
+.scope-row button.on { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
 .set-group { margin-bottom: var(--space-md); }
 .set-group h3 {
   font-family: var(--font-label);
@@ -687,6 +697,9 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <span id="charts-title">集計と推移</span>
       <button class="modal-close" data-close="mb-charts" aria-label="閉じる">✕</button>
     </div>
+    <div class="scope-row" id="charts-scope" role="group" aria-label="表示範囲">
+      <button data-scope="roll"></button><button data-scope="month"></button>
+    </div>
     <div class="dash" id="summary"></div>
     <div id="charts"></div>
     <details class="io">
@@ -704,6 +717,9 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
     <div class="modal-head">
       <span id="sleep-title">睡眠 — 就寝と起床</span>
       <button class="modal-close" data-close="mb-sleep" aria-label="閉じる">✕</button>
+    </div>
+    <div class="scope-row" id="sleep-scope" role="group" aria-label="表示範囲">
+      <button data-scope="roll"></button><button data-scope="month"></button>
     </div>
     <div class="chart" id="sleep-list"></div>
     <div class="ov-legend"><span>睡眠時間 短</span><span class="ramp slp"></span><span>長</span></div>
@@ -852,6 +868,9 @@ function todayKey() {
 }
 let viewMonth = todayKey().slice(0, 7);   // "YYYY-MM"
 let viewMode = "roll";                    // "roll"=直近N日（既定・毎日1日ずつスライド） | "month"=月間表示
+let chartsScope = null;                   // グラフモーダルの表示範囲。null=メインに追従
+let sleepScope = null;                    // 睡眠モーダルの表示範囲。null=メインに追従
+function scopeOf(s) { return s || viewMode; }
 let entryDate = todayKey();               // "YYYY-MM-DD"
 
 function daysInMonth(ym) {
@@ -969,6 +988,36 @@ function openEntry(dateKey) {
   openModal("mb-entry");
 }
 
+/* ── scope toggles（モーダル内の 直近◯日／◯月 切替） ── */
+function syncScopeUI() {
+  const m = Number(viewMonth.split("-")[1]);
+  const rollLb = "直近" + rollDays() + "日", monthLb = m + "月";
+  [["charts-scope", scopeOf(chartsScope)], ["sleep-scope", scopeOf(sleepScope)]].forEach(([id, mode]) => {
+    document.getElementById(id).querySelectorAll("button").forEach(b => {
+      b.textContent = b.dataset.scope === "roll" ? rollLb : monthLb;
+      b.classList.toggle("on", b.dataset.scope === mode);
+    });
+  });
+  document.getElementById("charts-title").textContent = "集計と推移 — " + (scopeOf(chartsScope) === "roll" ? rollLb : monthLb);
+  document.getElementById("sleep-title").textContent = "睡眠 — 就寝と起床（" + (scopeOf(sleepScope) === "roll" ? rollLb : monthLb) + "）";
+}
+document.getElementById("charts-scope").addEventListener("click", e => {
+  const b = e.target.closest("[data-scope]");
+  if (!b) return;
+  chartsScope = b.dataset.scope;
+  syncScopeUI();
+  renderSummary();
+  renderCharts();
+  renderTable();
+});
+document.getElementById("sleep-scope").addEventListener("click", e => {
+  const b = e.target.closest("[data-scope]");
+  if (!b) return;
+  sleepScope = b.dataset.scope;
+  syncScopeUI();
+  renderSleep();
+});
+
 /* ── view navigation: … 6月 ⇄ 7月 ⇄ 今月 ⇄ 直近N日（右端・既定） ── */
 function stepMonth(delta) {
   const cur = todayKey().slice(0, 7);
@@ -983,6 +1032,7 @@ function stepMonth(delta) {
     const nd = new Date(y, m - 1 + delta, 1);
     viewMonth = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0");
   }
+  chartsScope = sleepScope = null; /* メインの表示を変えたらモーダルは再び追従 */
   renderMonth();
 }
 document.getElementById("prev-month").addEventListener("click", () => stepMonth(-1));
@@ -990,7 +1040,8 @@ document.getElementById("next-month").addEventListener("click", () => stepMonth(
 
 /* ── summary: stat-tile dashboard ─────────── */
 function renderSummary() {
-  const n = daysInMonth(viewMonth);
+  const dkeys = viewDates(scopeOf(chartsScope)).map(keyOfDate);
+  const n = dkeys.length;
   const wrap = document.getElementById("summary");
   wrap.innerHTML = "";
   const tile = (label, val, unit, cvar) => {
@@ -1015,16 +1066,16 @@ function renderSummary() {
   };
   BOOLS.forEach(b => {
     let c = 0;
-    for (let d = 1; d <= n; d++) if ((db[dayKey(viewMonth, d)] || {})[b.key] === true) c++;
+    dkeys.forEach(k => { if ((db[k] || {})[b.key] === true) c++; });
     tile(b.label, String(c), "日/" + n, b.cvar);
   });
   NUMS.forEach(m => {
     if (m.noavg) return;
     const vals = [];
-    for (let d = 1; d <= n; d++) {
-      const v = (db[dayKey(viewMonth, d)] || {})[m.key];
+    dkeys.forEach(k => {
+      const v = (db[k] || {})[m.key];
       if (typeof v === "number" && isFinite(v)) vals.push(v);
-    }
+    });
     if (!vals.length) return;
     const avg = vals.reduce((a, b2) => a + b2, 0) / vals.length;
     tile(m.label + "・平均", m.fmt(m.key === "steps" ? Math.round(avg) : Math.round(avg * 100) / 100), m.unit || "", m.cvar);
@@ -1035,18 +1086,20 @@ function renderSummary() {
 function renderSleep() {
   const wrap = document.getElementById("sleep-list");
   wrap.innerHTML = "";
-  const n = daysInMonth(viewMonth);
-  const [y, m] = viewMonth.split("-").map(Number);
-  const todayD = viewMonth === todayKey().slice(0, 7) ? Number(todayKey().slice(8)) : -1;
+  const smode = scopeOf(sleepScope);
+  const dates = viewDates(smode);
+  const dkeys = dates.map(keyOfDate);
+  const n = dates.length;
+  const tk = todayKey();
   const clk = h => NUMBYKEY.slp.cellFmt(((h % 24) + 24) % 24);
   const rows = [];
-  for (let d = 1; d <= n; d++) {
-    const rec = db[dayKey(viewMonth, d)] || {};
+  dkeys.forEach((k, i) => {
+    const rec = db[k] || {};
     let b = typeof rec.bedt === "number" && isFinite(rec.bedt) ? rec.bedt : null;
     const w = typeof rec.wket === "number" && isFinite(rec.wket) ? rec.wket : null;
     if (b !== null && b >= 12) b -= 24;   /* 正午以降の就寝は前夜(負の時刻)として扱う */
-    if (b !== null || w !== null) rows.push({ d, b, w });
-  }
+    if (b !== null || w !== null) rows.push({ i, b, w });
+  });
   if (!rows.length) {
     const p = document.createElement("p");
     p.className = "empty-note";
@@ -1113,23 +1166,25 @@ function renderSleep() {
     svg.appendChild(ln);
   }
 
-  const byDay = {};
-  rows.forEach(r => byDay[r.d] = r);
-  for (let d = 1; d <= n; d++) {
-    const yC = MT + (d - 0.5) * RH;
-    const dow = new Date(y, m - 1, d).getDay();
+  const byIdx = {};
+  rows.forEach(r => byIdx[r.i] = r);
+  for (let i = 0; i < n; i++) {
+    const dobj = dates[i];
+    const d = dobj.getDate();
+    const yC = MT + (i + 0.5) * RH;
+    const dow = dobj.getDay();
     const dt = document.createElementNS(svgNS, "text");
     dt.setAttribute("x", ML - 4); dt.setAttribute("y", yC + 3);
     dt.setAttribute("text-anchor", "end");
     dt.setAttribute("class", "axislabel");
-    if (dow === 0 || dow === 6 || d === todayD) dt.setAttribute("style", "fill: var(--color-accent)");
-    dt.textContent = d + DOW[dow];
+    if (dow === 0 || dow === 6 || dkeys[i] === tk) dt.setAttribute("style", "fill: var(--color-accent)");
+    dt.textContent = (smode === "roll" && (i === 0 || d === 1) ? (dobj.getMonth() + 1) + "/" : "") + d + DOW[dow];
     svg.appendChild(dt);
-    const r = byDay[d];
+    const r = byIdx[i];
     if (!r) continue;
     const g = document.createElementNS(svgNS, "g");
     g.setAttribute("style", "cursor: pointer");
-    g.dataset.date = dayKey(viewMonth, d);
+    g.dataset.date = dkeys[i];
     if (r.b !== null && r.w !== null && r.w > r.b) {
       const rc = document.createElementNS(svgNS, "rect");
       rc.setAttribute("x", X(r.b)); rc.setAttribute("y", yC - (RH - 4) / 2);
@@ -1183,23 +1238,25 @@ function renderSleep() {
   wrap.appendChild(svg);
 }
 
-/* ── month table ──────────────────────────── */
+/* ── table（日別の全記録・表示範囲に追従） ── */
 function renderTable() {
-  const n = daysInMonth(viewMonth);
-  const [y, m] = viewMonth.split("-").map(Number);
+  const tmode = scopeOf(chartsScope);
+  const dates = viewDates(tmode);
   const tk = todayKey();
   const t = document.getElementById("month-table");
   let html = '<thead><tr><th class="date" scope="col">日</th>';
   BOOLS.forEach(b => html += '<th scope="col" title="' + b.label + '">' + b.short + "</th>");
   NUMS.forEach(x => html += '<th scope="col" title="' + x.label + '">' + x.short + "</th>");
   html += "</tr></thead><tbody>";
-  for (let d = 1; d <= n; d++) {
-    const key = dayKey(viewMonth, d);
+  for (let i = 0; i < dates.length; i++) {
+    const dobj = dates[i];
+    const d = dobj.getDate();
+    const key = keyOfDate(dobj);
     const rec = db[key] || {};
-    const dow = new Date(y, m - 1, d).getDay();
+    const dow = dobj.getDay();
     const cls = [dow === 0 || dow === 6 ? "weekend" : "", key === tk ? "today" : ""].join(" ").trim();
     html += '<tr tabindex="0" data-date="' + key + '"' + (cls ? ' class="' + cls + '"' : "") + ">";
-    html += '<td class="date">' + d + '<span class="dow">' + DOW[dow] + "</span></td>";
+    html += '<td class="date">' + (tmode === "roll" && (i === 0 || d === 1) ? (dobj.getMonth() + 1) + "/" : "") + d + '<span class="dow">' + DOW[dow] + "</span></td>";
     BOOLS.forEach(b => {
       const v = rec[b.key];
       html += "<td>" + (v === true ? '<span class="mark yes" role="img" aria-label="' + b.label + '：した"></span>'
@@ -1234,9 +1291,10 @@ function domainFor(mdef, vals) {
 function keyOfDate(dt) { return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); }
 function rollDays() { const v = Math.round(cfg.roll.days) || 30; return Math.max(7, Math.min(120, v)); }
 /* 表示対象の日付リスト: roll=今日を最下行とする直近N日 / month=viewMonthの1〜末日 */
-function viewDates() {
+function viewDates(mode) {
+  mode = mode || viewMode;
   const list = [];
-  if (viewMode === "roll") {
+  if (mode === "roll") {
     const t = new Date();
     for (let i = rollDays() - 1; i >= 0; i--) list.push(new Date(t.getFullYear(), t.getMonth(), t.getDate() - i));
   } else {
@@ -1452,14 +1510,17 @@ document.addEventListener("click", e => { if (!e.target.closest(".chart svg")) h
 function renderCharts() {
   const wrap = document.getElementById("charts");
   wrap.innerHTML = "";
-  const n = daysInMonth(viewMonth);
+  const cmode = scopeOf(chartsScope);
+  const cdates = viewDates(cmode);
+  const n = cdates.length;
+  /* d は表示範囲内の1始まり位置。実日付は dt に持つ */
   NUMS.forEach(mdef => {
     if (mdef.nochart) return;
     const pts = [];
-    for (let d = 1; d <= n; d++) {
-      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
-      if (typeof v === "number" && isFinite(v)) pts.push({ d, v });
-    }
+    cdates.forEach((dobj, i) => {
+      const v = (db[keyOfDate(dobj)] || {})[mdef.key];
+      if (typeof v === "number" && isFinite(v)) pts.push({ d: i + 1, dt: dobj, v });
+    });
     const div = document.createElement("div");
     div.className = "chart";
     div.style.setProperty("--mc", "var(" + mdef.cvar + ")");
@@ -1513,18 +1574,19 @@ function renderCharts() {
       }
     });
     [1, Math.round(n / 2), n].forEach(dd => {
+      const dobj = cdates[dd - 1];
       const tx = document.createElementNS(svgNS, "text");
       tx.setAttribute("x", dayX(dd)); tx.setAttribute("y", H - 3);
       tx.setAttribute("text-anchor", dd === 1 ? "start" : dd === n ? "end" : "middle");
       tx.setAttribute("class", "axislabel");
-      tx.textContent = dd + "日";
+      tx.textContent = cmode === "roll" ? (dobj.getMonth() + 1) + "/" + dobj.getDate() : dobj.getDate() + "日";
       svg.appendChild(tx);
     });
 
     const tipFor = (p, el) => ev => {
       ev.stopPropagation();
       const rect = el.getBoundingClientRect();
-      showTooltip(viewMonth.split("-")[1].replace(/^0/, "") + "/" + p.d + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
+      showTooltip((p.dt.getMonth() + 1) + "/" + p.dt.getDate() + " — " + mdef.fmt(p.v) + (mdef.unit || ""),
         rect.left + rect.width / 2, rect.top);
     };
     if (mdef.interp) {
@@ -1793,8 +1855,7 @@ function renderMonth() {
     document.getElementById("mt-month").textContent = m + "月";
     document.getElementById("mt-year").textContent = String(y);
   }
-  document.getElementById("charts-title").textContent = "集計と推移 — " + m + "月";
-  document.getElementById("sleep-title").textContent = "睡眠 — 就寝と起床（" + m + "月）";
+  syncScopeUI();
   renderOverview();
   renderSummary();
   renderSleep();
