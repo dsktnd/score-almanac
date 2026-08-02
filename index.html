@@ -49,11 +49,10 @@
   --c-alc:   oklch(70% 0.090 275);
   --color-check: oklch(48% 0.006 270);
   --color-error: oklch(52% 0.190 25);
-  /* sleep stacked-bar segments — user-specified flat colors, both modes */
-  --sb-deep:  #6f2dbd;
-  --sb-light: #a663cc;
-  --sb-rem:   #b8d0eb;
-  --sb-wake:  #066FCA;
+  /* sleep bar — 3-stop duration ramp (short→avg→long), user-editable, both modes */
+  --slp-r0: #066fca;
+  --slp-r1: #6f2dbd;
+  --slp-r2: #ff6d64;
   --sb-text-on-dark:  oklch(97% 0 0);
   --sb-text-on-light: oklch(22% 0.02 270);
   --alc-line: #ffffff;
@@ -290,10 +289,6 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
 .ov-bar .sb { color: var(--sb-text-on-light); }
 .ov-bar .sb.lt { color: var(--sb-text-on-dark); }
 .ov-bar .sb.lt .lb { text-shadow: 0 1px 2px oklch(30% 0.05 300 / 0.6); }
-.ov-bar .sb.deep  { background: var(--sb-deep); }
-.ov-bar .sb.light { background: var(--sb-light); }
-.ov-bar .sb.rem   { background: var(--sb-rem); }
-.ov-bar .sb.wake  { background: var(--sb-wake); }
 .ov-bar { position: relative; }
 .ov-bar.prev-alc::before {
   content: "";
@@ -303,22 +298,10 @@ section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: colu
   background: var(--alc-line);
   z-index: 1;
 }
-.ov-bar .tot {
-  position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
-  font-family: var(--font-label);
-  font-size: clamp(0.34rem, calc(var(--ov-cell) * 0.42), 0.625rem);
-  line-height: 1;
-  color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-}
-.mark.sq { border-radius: 2px; }
-.mark.sq.deep  { background: var(--sb-deep); }
-.mark.sq.light { background: var(--sb-light); }
-.mark.sq.rem   { background: var(--sb-rem); }
-.mark.sq.wake  { background: var(--sb-wake); }
 .ov-sp { background: none; }
 .ov-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs); margin-top: var(--space-xs); font-family: var(--font-label); font-size: var(--text-xs); color: var(--color-muted); }
 .ov-legend .ramp { width: 4.5rem; height: 0.5rem; border-radius: 1px; background: linear-gradient(to right, var(--color-paper-2), var(--color-neutral)); }
+.ov-legend .ramp.slp { background: linear-gradient(to right in oklab, var(--slp-r0), var(--slp-r1), var(--slp-r2)); }
 .ov-legend .mark { margin-left: var(--space-sm); }
 
 /* ── entry panel ──────────────────────────── */
@@ -626,10 +609,7 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
   <section class="ov-section">
     <div id="overview"></div>
     <div class="ov-legend">
-      <span class="mark sq deep"></span><span>深</span>
-      <span class="mark sq light"></span><span>浅</span>
-      <span class="mark sq rem"></span><span>レム</span>
-      <span class="mark sq wake"></span><span>覚醒</span>
+      <span>睡眠 短</span><span class="ramp slp"></span><span>長</span>
       <span class="mark alcline"></span><span>前日飲酒</span>
     </div>
   </section>
@@ -725,12 +705,11 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <div class="set-row"><label for="cfg-st-v2">段階3＝上限（歩）</label><input type="number" id="cfg-st-v2" step="500" inputmode="numeric"><input type="color" id="cfg-st-c2"></div>
     </div>
     <div class="set-group">
-      <h3>睡眠バー</h3>
+      <h3>睡眠バー（3段階・短い未満は1色目、長い以上は3色目）</h3>
       <div class="set-row"><label for="cfg-sb-scale">バーの目盛り上限（時間）</label><input type="number" id="cfg-sb-scale" min="6" max="24" step="1" inputmode="numeric"></div>
-      <div class="set-row"><label for="cfg-sb-deep">深い睡眠</label><input type="color" id="cfg-sb-deep"></div>
-      <div class="set-row"><label for="cfg-sb-light">浅い睡眠</label><input type="color" id="cfg-sb-light"></div>
-      <div class="set-row"><label for="cfg-sb-rem">レム睡眠</label><input type="color" id="cfg-sb-rem"></div>
-      <div class="set-row"><label for="cfg-sb-wake">覚醒</label><input type="color" id="cfg-sb-wake"></div>
+      <div class="set-row"><label for="cfg-sl-v0">短い（時間）</label><input type="number" id="cfg-sl-v0" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c0"></div>
+      <div class="set-row"><label for="cfg-sl-v1">平均（時間）</label><input type="number" id="cfg-sl-v1" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c1"></div>
+      <div class="set-row"><label for="cfg-sl-v2">長い（時間）</label><input type="number" id="cfg-sl-v2" min="0" max="24" step="0.5" inputmode="decimal"><input type="color" id="cfg-sl-c2"></div>
       <div class="set-row"><label for="cfg-sb-alcline">前日飲酒ライン</label><input type="color" id="cfg-sb-alcline"></div>
     </div>
     <div class="io-row"><button id="cfg-reset">初期設定に戻す</button></div>
@@ -781,7 +760,17 @@ const NUMS = [
 const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
 darkMq.addEventListener("change", () => renderMonth());
 /* overview column order: 体重・リカ・睡眠積み上げバー | ベ・酒・サ・英 | 歩 (null = group gap) */
-const SLEEP_BAR = { sleepbar: true, scale: 10, segs: [["deep", "深"], ["light", "浅"], ["rem", "レ"], ["wake", "覚"]] };
+/* ramp: 睡眠時間の3段グラデ（短→平均→長）。segs はツールチップの内訳表示にのみ使用 */
+const SLEEP_BAR = { sleepbar: true, scale: 10, ramp: [{ v: 5, c: "#066fca", L: 54 }, { v: 7, c: "#6f2dbd", L: 47 }, { v: 9, c: "#ff6d64", L: 71 }], segs: [["deep", "深"], ["light", "浅"], ["rem", "レ"], ["wake", "覚"]] };
+/* 睡眠時間 → ランプ色（下限未満は1色目のまま・上限超は3色目のまま） */
+function slpRampColor(v) {
+  const s = SLEEP_BAR.ramp;
+  if (v <= s[0].v) return { bg: s[0].c, L: s[0].L };
+  if (v >= s[2].v) return { bg: s[2].c, L: s[2].L };
+  const a = v <= s[1].v ? s[0] : s[1], b = v <= s[1].v ? s[1] : s[2];
+  const t = (v - a.v) / ((b.v - a.v) || 1);
+  return { bg: "color-mix(in oklab, " + b.c + " " + Math.round(t * 100) + "%, " + a.c + ")", L: a.L + (b.L - a.L) * t };
+}
 const NUMBYKEY = {};
 NUMS.forEach(n => NUMBYKEY[n.key] = n);
 /* overview columns: 体重・歩 | 酒・ベッド・リカ・眠ス・睡眠バー(数字内包) | サ・英 */
@@ -1049,7 +1038,7 @@ function renderSleep() {
       rc.setAttribute("x", X(r.b)); rc.setAttribute("y", yC - (RH - 4) / 2);
       rc.setAttribute("width", X(r.w) - X(r.b)); rc.setAttribute("height", RH - 4);
       rc.setAttribute("rx", 2.5);
-      rc.setAttribute("fill", cfg.sleep.deep);
+      rc.setAttribute("fill", SLEEP_BAR.ramp[1].c);
       g.appendChild(rc);
       const t1 = document.createElementNS(svgNS, "text");
       t1.setAttribute("x", X(r.b) - 3); t1.setAttribute("y", yC + 3);
@@ -1078,7 +1067,7 @@ function renderSleep() {
         const c = document.createElementNS(svgNS, "circle");
         c.setAttribute("cx", X(v)); c.setAttribute("cy", yC);
         c.setAttribute("r", 2.5);
-        c.setAttribute("fill", cfg.sleep.deep);
+        c.setAttribute("fill", SLEEP_BAR.ramp[1].c);
         g.appendChild(c);
         const tl = document.createElementNS(svgNS, "text");
         tl.setAttribute("x", X(v) + 4); tl.setAttribute("y", yC + 3);
@@ -1199,7 +1188,7 @@ function renderOverview() {
     if (c.sleepbar) {
       h.className = "ov-h bar";
       h.textContent = "睡眠 0–" + c.scale + "h";
-      h.title = "睡眠の積み上げ（深い・浅い・レム・覚醒）";
+      h.title = "睡眠時間（短い→長いで色が変化）";
     } else {
       h.className = "ov-h";
       h.textContent = c.short;
@@ -1232,31 +1221,23 @@ function renderOverview() {
         if ((db[prevKey] || {}).alc === true) cell.classList.add("prev-alc");
         const hours = {};
         let sum = 0;
-        c.segs.forEach(sg => {
-          const sv = rec[sg[0]];
-          if (typeof sv === "number" && isFinite(sv)) { hours[sg[0]] = sv; sum += sv; }
-        });
-        const factor = sum > c.scale ? c.scale / sum : 1;
         const tips = [];
         c.segs.forEach(sg => {
-          const sv = hours[sg[0]];
-          if (sv === undefined || sv <= 0) { if (sv !== undefined) tips.push(sg[1] + "0:00"); return; }
-          const seg = document.createElement("div");
-          seg.className = "sb " + sg[0] + (hexL(cfg.sleep[sg[0]]) < 64 ? " lt" : "");
-          seg.style.width = (sv * factor / c.scale * 100) + "%";
-          const lb = document.createElement("span");
-          lb.className = "lb";
-          lb.textContent = sv >= 1 ? NUMBYKEY.slp.cellFmt(sv) : Math.round(sv * 60) + "m";
-          seg.appendChild(lb);
-          cell.appendChild(seg);
-          tips.push(sg[1] + NUMBYKEY.slp.cellFmt(sv));
+          const sv = rec[sg[0]];
+          if (typeof sv === "number" && isFinite(sv)) { hours[sg[0]] = sv; sum += sv; tips.push(sg[1] + NUMBYKEY.slp.cellFmt(sv)); }
         });
         const total = typeof rec.slp === "number" && isFinite(rec.slp) ? rec.slp : (sum > 0 ? sum : null);
         if (total !== null) {
-          const tot = document.createElement("span");
-          tot.className = "tot";
-          tot.textContent = NUMBYKEY.slp.cellFmt(total);
-          cell.appendChild(tot);
+          const rc2 = slpRampColor(total);
+          const seg = document.createElement("div");
+          seg.className = "sb" + (rc2.L < 64 ? " lt" : "");
+          seg.style.width = (Math.min(total, c.scale) / c.scale * 100) + "%";
+          seg.style.background = rc2.bg;
+          const lb = document.createElement("span");
+          lb.className = "lb";
+          lb.textContent = total >= 1 ? NUMBYKEY.slp.cellFmt(total) : Math.round(total * 60) + "m";
+          seg.appendChild(lb);
+          cell.appendChild(seg);
         }
         cell.dataset.tip = "睡眠 " + (total !== null ? NUMBYKEY.slp.fmt(total) : "未記入") + (tips.length ? "（" + tips.join(" ") + "）" : "");
         cell.dataset.d = d;
@@ -1526,7 +1507,7 @@ const DEFAULT_CFG = {
   rec: { c: "#ff499e" },
   slps: { c: "#6f2dbd" },
   steps: { s: [{ v: 2000, c: "#49b6ff" }, { v: 5000, c: "#a480cf" }, { v: 10000, c: "#ff499e" }] },
-  sleep: { scale: 10, deep: "#6f2dbd", light: "#a663cc", rem: "#b8d0eb", wake: "#066fca", alcline: "#ffffff" },
+  sleep: { scale: 10, alcline: "#ffffff", r: [{ v: 5, c: "#066fca" }, { v: 7, c: "#6f2dbd" }, { v: 9, c: "#ff6d64" }] },
 };
 function loadCfg() {
   let c = {};
@@ -1536,7 +1517,11 @@ function loadCfg() {
     rec: Object.assign({}, DEFAULT_CFG.rec, c.rec),
     slps: Object.assign({}, DEFAULT_CFG.slps, c.slps),
     steps: { s: (c.steps && Array.isArray(c.steps.s) && c.steps.s.length === 3) ? c.steps.s : DEFAULT_CFG.steps.s.map(x => Object.assign({}, x)) },
-    sleep: Object.assign({}, DEFAULT_CFG.sleep, c.sleep),
+    sleep: (() => {
+      const s = Object.assign({}, DEFAULT_CFG.sleep, c.sleep);
+      if (!Array.isArray(s.r) || s.r.length !== 3) s.r = DEFAULT_CFG.sleep.r.map(x => Object.assign({}, x));
+      return s;
+    })(),
   };
 }
 let cfg = loadCfg();
@@ -1560,11 +1545,12 @@ function applyCfg() {
   NUMBYKEY.steps.fixed = [0, top];
   NUMBYKEY.steps.stops = ss.map(x => ({ t: Math.min(1, x.v / top), c: x.c, L: hexL(x.c) }));
   SLEEP_BAR.scale = cfg.sleep.scale;
+  const sr = cfg.sleep.r.slice().sort((a, b) => a.v - b.v);
+  SLEEP_BAR.ramp = sr.map(x => ({ v: x.v, c: x.c, L: hexL(x.c) }));
   const rt = document.documentElement.style;
-  rt.setProperty("--sb-deep", cfg.sleep.deep);
-  rt.setProperty("--sb-light", cfg.sleep.light);
-  rt.setProperty("--sb-rem", cfg.sleep.rem);
-  rt.setProperty("--sb-wake", cfg.sleep.wake);
+  rt.setProperty("--slp-r0", sr[0].c);
+  rt.setProperty("--slp-r1", sr[1].c);
+  rt.setProperty("--slp-r2", sr[2].c);
   rt.setProperty("--alc-line", cfg.sleep.alcline);
   rt.setProperty("--c-wt", w.c1);
   rt.setProperty("--c-rec", cfg.rec.c);
@@ -1577,8 +1563,6 @@ const CFG_IDS = {
   "cfg-rec-c": ["rec", "c", "col"],
   "cfg-slps-c": ["slps", "c", "col"],
   "cfg-sb-scale": ["sleep", "scale", "num"],
-  "cfg-sb-deep": ["sleep", "deep", "col"], "cfg-sb-light": ["sleep", "light", "col"],
-  "cfg-sb-rem": ["sleep", "rem", "col"], "cfg-sb-wake": ["sleep", "wake", "col"],
   "cfg-sb-alcline": ["sleep", "alcline", "col"],
 };
 function fillCfgForm() {
@@ -1589,6 +1573,10 @@ function fillCfgForm() {
   cfg.steps.s.forEach((x, i) => {
     document.getElementById("cfg-st-v" + i).value = x.v;
     document.getElementById("cfg-st-c" + i).value = x.c;
+  });
+  cfg.sleep.r.forEach((x, i) => {
+    document.getElementById("cfg-sl-v" + i).value = x.v;
+    document.getElementById("cfg-sl-c" + i).value = x.c;
   });
 }
 document.getElementById("mb-set").addEventListener("change", e => {
@@ -1610,6 +1598,15 @@ document.getElementById("mb-set").addEventListener("change", e => {
       cfg.steps.s[i].v = v;
     } else {
       cfg.steps.s[i].c = e.target.value;
+    }
+  } else if (/^cfg-sl-[vc][012]$/.test(id)) {
+    const i = Number(id.slice(-1));
+    if (id[7] === "v") {
+      const v = parseFloat(e.target.value);
+      if (!isFinite(v) || v < 0) { fillCfgForm(); return; }
+      cfg.sleep.r[i].v = v;
+    } else {
+      cfg.sleep.r[i].c = e.target.value;
     }
   } else return;
   localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
