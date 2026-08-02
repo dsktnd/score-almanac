@@ -223,7 +223,7 @@ h2 {
 /* ── month overview: vertical calendar heatmap ── */
 section.ov-section { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
 .ov-grid {
-  --ov-cell: clamp(0.875rem, calc((100dvh - 8rem) / 31 - 2px), 1.75rem);
+  --ov-cell: clamp(0.875rem, calc((100dvh - 8rem) / var(--ov-rows, 31) - 2px), 1.75rem);
   display: grid;
   grid-template-columns: 2.2rem repeat(6, var(--ov-cell)) minmax(6rem, 1fr) 0.5rem repeat(2, var(--ov-cell));
   gap: 2px;
@@ -736,6 +736,10 @@ button:focus-visible, summary:focus-visible, tr:focus-visible { outline: 2px sol
       <button class="modal-close" data-close="mb-set" aria-label="閉じる">✕</button>
     </div>
     <div class="set-group">
+      <h3>メイン表示</h3>
+      <div class="set-row"><label for="cfg-roll-days">直近表示の日数（7–120）</label><input type="number" id="cfg-roll-days" min="7" max="120" step="1" inputmode="numeric"></div>
+    </div>
+    <div class="set-group">
       <h3>体重（kg）</h3>
       <div class="set-row"><label for="cfg-wt-min">下限（この値以下の色）</label><input type="number" id="cfg-wt-min" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c0"></div>
       <div class="set-row"><label for="cfg-wt-max">上限（この値以上の色）</label><input type="number" id="cfg-wt-max" step="0.5" inputmode="decimal"><input type="color" id="cfg-wt-c1"></div>
@@ -847,6 +851,7 @@ function todayKey() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 let viewMonth = todayKey().slice(0, 7);   // "YYYY-MM"
+let viewMode = "roll";                    // "roll"=直近N日（既定・毎日1日ずつスライド） | "month"=月間表示
 let entryDate = todayKey();               // "YYYY-MM-DD"
 
 function daysInMonth(ym) {
@@ -964,11 +969,20 @@ function openEntry(dateKey) {
   openModal("mb-entry");
 }
 
-/* ── month navigation ─────────────────────── */
+/* ── view navigation: … 6月 ⇄ 7月 ⇄ 今月 ⇄ 直近N日（右端・既定） ── */
 function stepMonth(delta) {
-  const [y, m] = viewMonth.split("-").map(Number);
-  const nd = new Date(y, m - 1 + delta, 1);
-  viewMonth = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0");
+  const cur = todayKey().slice(0, 7);
+  if (viewMode === "roll") {
+    if (delta > 0) return; /* 直近表示がナビの右端 */
+    viewMode = "month";
+    viewMonth = cur;
+  } else if (delta > 0 && viewMonth >= cur) {
+    viewMode = "roll";
+  } else {
+    const [y, m] = viewMonth.split("-").map(Number);
+    const nd = new Date(y, m - 1 + delta, 1);
+    viewMonth = nd.getFullYear() + "-" + String(nd.getMonth() + 1).padStart(2, "0");
+  }
   renderMonth();
 }
 document.getElementById("prev-month").addEventListener("click", () => stepMonth(-1));
@@ -1216,32 +1230,46 @@ function domainFor(mdef, vals) {
   return [lo, hi];
 }
 
-/* ── month overview: vertical calendar heatmap ── */
+/* ── overview: vertical heatmap（直近ローリング／月間） ── */
+function keyOfDate(dt) { return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); }
+function rollDays() { const v = Math.round(cfg.roll.days) || 30; return Math.max(7, Math.min(120, v)); }
+/* 表示対象の日付リスト: roll=今日を最下行とする直近N日 / month=viewMonthの1〜末日 */
+function viewDates() {
+  const list = [];
+  if (viewMode === "roll") {
+    const t = new Date();
+    for (let i = rollDays() - 1; i >= 0; i--) list.push(new Date(t.getFullYear(), t.getMonth(), t.getDate() - i));
+  } else {
+    const [y, m] = viewMonth.split("-").map(Number);
+    for (let d = 1, n = daysInMonth(viewMonth); d <= n; d++) list.push(new Date(y, m - 1, d));
+  }
+  return list;
+}
 function renderOverview() {
   const wrap = document.getElementById("overview");
   wrap.innerHTML = "";
-  const n = daysInMonth(viewMonth);
-  const [yy, mm] = viewMonth.split("-").map(Number);
+  const dates = viewDates();
+  const dkeys = dates.map(keyOfDate);
   const tk = todayKey();
-  const todayD = tk.slice(0, 7) === viewMonth ? Number(tk.slice(8)) : 0;
+  document.documentElement.style.setProperty("--ov-rows", Math.max(31, dates.length));
 
   const domains = {};
   NUMS.forEach(mdef => {
     const vals = [];
-    for (let d = 1; d <= n; d++) {
-      const v = (db[dayKey(viewMonth, d)] || {})[mdef.key];
+    dkeys.forEach(k => {
+      const v = (db[k] || {})[mdef.key];
       if (typeof v === "number" && isFinite(v)) vals.push(v);
-    }
+    });
     domains[mdef.key] = mdef.fixed ? mdef.fixed.slice() : (vals.length ? domainFor(mdef, vals) : [0, 1]);
   });
   // linear interpolation between entered days (color-only fill on gap days)
   const interpMaps = {};
   NUMS.filter(x => x.interp).forEach(x => {
     const pts = [];
-    for (let d = 1; d <= n; d++) {
-      const v = (db[dayKey(viewMonth, d)] || {})[x.key];
-      if (typeof v === "number" && isFinite(v)) pts.push([d, v]);
-    }
+    dkeys.forEach((k, i) => {
+      const v = (db[k] || {})[x.key];
+      if (typeof v === "number" && isFinite(v)) pts.push([i, v]);
+    });
     const map = {};
     for (let i = 0; i < pts.length - 1; i++) {
       const [d1, v1] = pts[i], [d2, v2] = pts[i + 1];
@@ -1250,16 +1278,16 @@ function renderOverview() {
     interpMaps[x.key] = map;
   });
 
-  // sleep-group metrics share one domain (0 → month max) so shades are comparable
+  // sleep-group metrics share one domain (0 → view max) so shades are comparable
   const sleepKeys = NUMS.filter(x => x.group === "sleep").map(x => x.key);
   let sleepMax = 0;
-  sleepKeys.forEach(k => {
-    for (let d = 1; d <= n; d++) {
-      const v = (db[dayKey(viewMonth, d)] || {})[k];
+  sleepKeys.forEach(sk => {
+    dkeys.forEach(k => {
+      const v = (db[k] || {})[sk];
       if (typeof v === "number" && isFinite(v) && v > sleepMax) sleepMax = v;
-    }
+    });
   });
-  sleepKeys.forEach(k => { domains[k] = [0, sleepMax || 1]; });
+  sleepKeys.forEach(sk => { domains[sk] = [0, sleepMax || 1]; });
 
   const grid = document.createElement("div");
   grid.className = "ov-grid";
@@ -1282,27 +1310,29 @@ function renderOverview() {
     grid.appendChild(h);
   });
 
-  for (let d = 1; d <= n; d++) {
-    const key = dayKey(viewMonth, d);
+  dates.forEach((dobj, i) => {
+    const key = dkeys[i];
     const rec = db[key] || {};
-    const dow = new Date(yy, mm - 1, d).getDay();
+    const dow = dobj.getDay();
+    const d = dobj.getDate();
+    const isToday = key === tk;
 
     const dt = document.createElement("div");
-    dt.className = "ov-date" + (dow === 0 || dow === 6 ? " we" : "") + (d === todayD ? " today" : "");
-    dt.textContent = d + DOW[dow];
-    dt.dataset.d = d;
+    dt.className = "ov-date" + (dow === 0 || dow === 6 ? " we" : "") + (isToday ? " today" : "");
+    /* roll表示では先頭行と月初に「M/」を付けて月の切れ目を示す */
+    dt.textContent = (viewMode === "roll" && (i === 0 || d === 1) ? (dobj.getMonth() + 1) + "/" : "") + d + DOW[dow];
+    dt.dataset.k = key;
     dt.dataset.tip = "を記入欄へ";
     grid.appendChild(dt);
 
     OV_COLS.forEach(c => {
       if (!c) { grid.appendChild(Object.assign(document.createElement("div"), { className: "ov-sp" })); return; }
       const cell = document.createElement("div");
-      cell.className = "ov-cell" + (d === todayD ? " today" : "");
+      cell.className = "ov-cell" + (isToday ? " today" : "");
       if (c.sleepbar) {
         cell.classList.add("ov-bar");
-        const pd = new Date(yy, mm - 1, d - 1);
-        const prevKey = pd.getFullYear() + "-" + String(pd.getMonth() + 1).padStart(2, "0") + "-" + String(pd.getDate()).padStart(2, "0");
-        if ((db[prevKey] || {}).alc === true) cell.classList.add("prev-alc");
+        const pd = new Date(dobj.getFullYear(), dobj.getMonth(), dobj.getDate() - 1);
+        if ((db[keyOfDate(pd)] || {}).alc === true) cell.classList.add("prev-alc");
         const hours = {};
         let sum = 0;
         c.segs.forEach(sg => {
@@ -1332,15 +1362,15 @@ function renderOverview() {
           cell.appendChild(tot);
         }
         cell.dataset.tip = "睡眠 " + (total !== null ? NUMBYKEY.slp.fmt(total) : "未記入") + (tips.length ? "（" + tips.join(" ") + "）" : "");
-        cell.dataset.d = d;
+        cell.dataset.k = key;
         grid.appendChild(cell);
         return;
       }
       let v = rec[c.key];
       if (!c.bool) {
         let isInterp = false;
-        if (!(typeof v === "number" && isFinite(v)) && c.interp && interpMaps[c.key][d] !== undefined) {
-          v = interpMaps[c.key][d];
+        if (!(typeof v === "number" && isFinite(v)) && c.interp && interpMaps[c.key][i] !== undefined) {
+          v = interpMaps[c.key][i];
           isInterp = true;
         }
         const has = typeof v === "number" && isFinite(v);
@@ -1379,20 +1409,20 @@ function renderOverview() {
         else if (v === false) cell.classList.add("no");
         cell.dataset.tip = c.label + "：" + (v === true ? "した" : v === false ? "しなかった" : "未記入");
       }
-      cell.dataset.d = d;
+      cell.dataset.k = key;
       grid.appendChild(cell);
     });
-  }
+  });
 
   grid.addEventListener("click", ev => {
-    const t = ev.target.closest("[data-d]");
+    const t = ev.target.closest("[data-k]");
     if (!t) return;
-    const d = Number(t.dataset.d);
+    const k = t.dataset.k;
     if (t.classList.contains("ov-date")) {
-      openEntry(dayKey(viewMonth, d));
+      openEntry(k);
     } else {
       const rect = t.getBoundingClientRect();
-      showTooltip(mm + "/" + d + " " + t.dataset.tip, ev.clientX, rect.top);
+      showTooltip(Number(k.slice(5, 7)) + "/" + Number(k.slice(8)) + " " + t.dataset.tip, ev.clientX, rect.top);
     }
     ev.stopPropagation();
   });
@@ -1625,6 +1655,7 @@ document.getElementById("paste-json").addEventListener("click", () => {
 /* ── settings: user colors & domains ──────── */
 const CFG_KEY = STORE_KEY + ":cfg";
 const DEFAULT_CFG = {
+  roll: { days: 30 },
   wt: { min: 60, max: 70, c0: "#066fca", c1: "#ff6d64" },
   rec: { c: "#ff499e" },
   slps: { c: "#6f2dbd" },
@@ -1635,6 +1666,7 @@ function loadCfg() {
   let c = {};
   try { c = JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { c = {}; }
   return {
+    roll: Object.assign({}, DEFAULT_CFG.roll, c.roll),
     wt: Object.assign({}, DEFAULT_CFG.wt, c.wt),
     rec: Object.assign({}, DEFAULT_CFG.rec, c.rec),
     slps: Object.assign({}, DEFAULT_CFG.slps, c.slps),
@@ -1684,6 +1716,7 @@ function applyCfg() {
   rt.setProperty("--c-steps", ss[2].c);
 }
 const CFG_IDS = {
+  "cfg-roll-days": ["roll", "days", "num"],
   "cfg-wt-min": ["wt", "min", "num"], "cfg-wt-max": ["wt", "max", "num"],
   "cfg-wt-c0": ["wt", "c0", "col"], "cfg-wt-c1": ["wt", "c1", "col"],
   "cfg-rec-c": ["rec", "c", "col"],
@@ -1751,9 +1784,17 @@ document.getElementById("cfg-reset").addEventListener("click", () => {
 
 /* ── render root ──────────────────────────── */
 function renderMonth() {
+  if (viewMode === "roll") viewMonth = todayKey().slice(0, 7); /* roll中のモーダル類は今月分 */
   const [y, m] = viewMonth.split("-").map(Number);
-  document.getElementById("mt-month").textContent = m + "月";
-  document.getElementById("mt-year").textContent = String(y);
+  if (viewMode === "roll") {
+    document.getElementById("mt-month").textContent = "直近" + rollDays() + "日";
+    document.getElementById("mt-year").textContent = "";
+  } else {
+    document.getElementById("mt-month").textContent = m + "月";
+    document.getElementById("mt-year").textContent = String(y);
+  }
+  document.getElementById("charts-title").textContent = "集計と推移 — " + m + "月";
+  document.getElementById("sleep-title").textContent = "睡眠 — 就寝と起床（" + m + "月）";
   renderOverview();
   renderSummary();
   renderSleep();
